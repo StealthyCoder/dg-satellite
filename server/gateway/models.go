@@ -10,3 +10,9 @@ import (
 type (
 	Device = storage.Device
 )
+
+type NetworkInfo struct {
+	Hostname  string `json:"hostname,omitempty"`
+	Mac       string `json:"mac,omitempty"`
+	LocalIpv4 string `json:"local_ipv4,omitempty"`
+}

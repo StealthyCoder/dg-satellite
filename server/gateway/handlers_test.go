@@ -4,6 +4,7 @@
 package gateway
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -11,9 +12,11 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/json"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -28,10 +31,12 @@ import (
 
 type testClient struct {
 	t   *testing.T
+	fs  *storage.FsHandle
 	gw  *storage.Storage
 	e   *echo.Echo
 	log *slog.Logger
 
+	uuid string
 	cert *x509.Certificate
 }
 
@@ -53,10 +58,30 @@ func (c testClient) GET(resource string, status int, headers ...string) []byte {
 	return rec.Body.Bytes()
 }
 
+func (c testClient) PUT(resource string, status int, data any, headers ...string) []byte {
+	req := httptest.NewRequest(http.MethodPut, resource, c.marshalBody(data))
+	c.marshalHeaders(headers, req)
+	rec := c.Do(req)
+	require.Equal(c.t, status, rec.Code)
+	return rec.Body.Bytes()
+}
+
 func (c testClient) marshalHeaders(headers []string, req *http.Request) {
 	require.Zero(c.t, len(headers)%2, "Headers must be a sequence of names and values - even number")
 	for i := 0; i < len(headers)/2; i++ {
 		req.Header.Add(headers[i*2], headers[i*2+1])
+	}
+}
+
+func (c testClient) marshalBody(data any) io.Reader {
+	if s, ok := data.(string); ok {
+		return strings.NewReader(s)
+	} else if b, ok := data.([]byte); ok {
+		return bytes.NewReader(b)
+	} else {
+		b, err := json.Marshal(data)
+		require.Nil(c.t, err)
+		return bytes.NewReader(b)
 	}
 }
 
@@ -78,16 +103,19 @@ func NewTestClient(t *testing.T) *testClient {
 	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.Nil(t, err)
 
+	uuid := "test-client-uuid"
 	cert := x509.Certificate{
-		Subject:   pkix.Name{CommonName: "test-client-uuid"},
+		Subject:   pkix.Name{CommonName: uuid},
 		PublicKey: priv.Public(),
 	}
 	tc := testClient{
 		t:   t,
 		gw:  gwS,
+		fs:  fsS,
 		e:   e,
 		log: log,
 
+		uuid: uuid,
 		cert: &cert,
 	}
 	return &tc
@@ -119,7 +147,7 @@ func TestCheckIn(t *testing.T) {
 	assert.Equal(t, tag, d.Tag)
 	assert.Equal(t, target, d.TargetName)
 
-	d, err := tc.gw.DeviceGet(d.Uuid)
+	d, err := tc.gw.DeviceGet(tc.uuid)
 	require.Nil(t, err)
 	assert.Equal(t, apps, d.Apps)
 	assert.Equal(t, hash, d.OstreeHash)
@@ -131,10 +159,33 @@ func TestCheckIn(t *testing.T) {
 	apps = "a,b,d"
 	_ = tc.GET("/device", 200, "x-ats-dockerapps", apps, "x-ats-tags", tag)
 
-	d, err = tc.gw.DeviceGet(d.Uuid)
+	d, err = tc.gw.DeviceGet(tc.uuid)
 	require.Nil(t, err)
 	assert.Equal(t, apps, d.Apps)
 	assert.Equal(t, hash, d.OstreeHash)
 	assert.Equal(t, tag, d.Tag)
 	assert.Equal(t, target, d.TargetName)
+}
+
+func TestInfo(t *testing.T) {
+	akInfo := "[config]\nkey=value"
+	hwInfo := `{"key":"value"}`
+	hwInfoBad := `{key=value}`
+	nwInfo := `{"hostname":"example.org"}`
+	nwInfoBad := `{"hostname":123}`
+	tc := NewTestClient(t)
+	_ = tc.PUT("/system_info", 200, hwInfo)
+	_ = tc.PUT("/system_info", 400, hwInfoBad)
+	_ = tc.PUT("/system_info/config", 200, akInfo)
+	_ = tc.PUT("/system_info/network", 200, nwInfo)
+	_ = tc.PUT("/system_info/network", 400, nwInfoBad)
+	data, err := tc.fs.Devices.ReadFile(tc.uuid, storage.AktomlFile)
+	assert.Nil(t, err)
+	assert.Equal(t, akInfo, data)
+	data, err = tc.fs.Devices.ReadFile(tc.uuid, storage.HwInfoFile)
+	assert.Nil(t, err)
+	assert.Equal(t, hwInfo, data)
+	data, err = tc.fs.Devices.ReadFile(tc.uuid, storage.NetInfoFile)
+	assert.Nil(t, err)
+	assert.Equal(t, nwInfo, data)
 }
