@@ -27,14 +27,14 @@ var (
 
 const (
 	// TLS certs
-	CertsCasPemFile = "cas.pem"
-	CertsTlsKeyFile = "tls.key"
-	CertsTlsPemFile = "tls.pem"
+	CertsCasPemFile = storage.CertsCasPemFile
+	CertsTlsKeyFile = storage.CertsTlsKeyFile
+	CertsTlsPemFile = storage.CertsTlsPemFile
 
 	// Per device files/dirs
-	AktomlFile  = "aktoml"
-	HwInfoFile  = "hardware-info"
-	NetInfoFile = "network-info"
+	AktomlFile  = storage.AktomlFile
+	HwInfoFile  = storage.HwInfoFile
+	NetInfoFile = storage.NetInfoFile
 )
 
 type Storage struct {
