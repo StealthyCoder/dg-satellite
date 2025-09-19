@@ -16,6 +16,7 @@ const (
 	CertsDir   = "certs"
 	DbFile     = "db.sqlite"
 	DevicesDir = "devices"
+	UpdatesDir = "updates"
 
 	CertsCasPemFile = "cas.pem"
 	CertsTlsCsrFile = "tls.csr"
@@ -28,6 +29,19 @@ const (
 	NetInfoFile  = "network-info"
 	EventsPrefix = "events"
 	StatesPrefix = "apps-states"
+
+	// Per update files/dirs
+	// Update roots
+	UpdatesCiDir   = "ci"
+	UpdatesProdDir = "prod"
+	// Update categories
+	UpdatesTufDir    = "tuf"
+	UpdatesOstreeDir = "ostree_repo"
+	// TUF category files
+	TufRootFile      = "root.json"
+	TufTimestampFile = "timestamp.json"
+	TufSnapshotFile  = "snapshot.json"
+	TufTargetsFile   = "targets.json"
 )
 
 type FsConfig string
@@ -48,17 +62,47 @@ func (c FsConfig) DevicesDir() string {
 	return filepath.Join(string(c), DevicesDir)
 }
 
+func (c FsConfig) UpdatesDir() string {
+	return filepath.Join(string(c), UpdatesDir)
+}
+
+func (c FsConfig) UpdatesCiDir() string {
+	return filepath.Join(c.UpdatesDir(), UpdatesCiDir)
+}
+
+func (c FsConfig) UpdatesProdDir() string {
+	return filepath.Join(c.UpdatesDir(), UpdatesProdDir)
+}
+
 type FsHandle struct {
 	Config FsConfig
 
 	Certs   CertsFsHandle
 	Devices DevicesFsHandle
+	Updates struct {
+		Ci struct {
+			Ostree UpdatesFsHandle
+			Tuf    UpdatesFsHandle
+		}
+		Prod struct {
+			Ostree UpdatesFsHandle
+			Tuf    UpdatesFsHandle
+		}
+	}
 }
 
 func NewFs(root string) (*FsHandle, error) {
 	fs := &FsHandle{Config: FsConfig(root)}
 	fs.Certs.root = fs.Config.CertsDir()
 	fs.Devices.root = fs.Config.DevicesDir()
+	fs.Updates.Ci.Ostree.root = fs.Config.UpdatesCiDir()
+	fs.Updates.Ci.Ostree.category = UpdatesOstreeDir
+	fs.Updates.Ci.Tuf.root = fs.Config.UpdatesCiDir()
+	fs.Updates.Ci.Tuf.category = UpdatesTufDir
+	fs.Updates.Prod.Ostree.root = fs.Config.UpdatesProdDir()
+	fs.Updates.Prod.Ostree.category = UpdatesOstreeDir
+	fs.Updates.Prod.Tuf.root = fs.Config.UpdatesProdDir()
+	fs.Updates.Prod.Ostree.category = UpdatesTufDir
 
 	for _, h := range []struct {
 		handle baseFsHandle
@@ -66,6 +110,9 @@ func NewFs(root string) (*FsHandle, error) {
 	}{
 		{fs.Certs.baseFsHandle, 0o744},
 		{fs.Devices.baseFsHandle, 0o740},
+		// All updates categories have the same base dir, so only one of Ci/prod is needed.
+		{fs.Updates.Ci.Tuf.baseFsHandle, 0o744},
+		{fs.Updates.Prod.Tuf.baseFsHandle, 0o744},
 	} {
 		if err := h.handle.mkdirs(h.mode, true); err != nil {
 			return nil, fmt.Errorf("unable to initialize file storage: %w", err)
@@ -164,6 +211,39 @@ func (s DevicesFsHandle) deviceLocalHandle(uuid string, forUpdate bool) (h baseF
 	if forUpdate {
 		if err = h.mkdirs(0o744, true); err != nil {
 			err = fmt.Errorf("unable to create file storage for device %s: %w", uuid, err)
+		}
+	}
+	return
+}
+
+type UpdatesFsHandle struct {
+	baseFsHandle
+	category string
+}
+
+func (s UpdatesFsHandle) ReadFile(tag, update, name string) (string, error) {
+	h, _ := s.updateLocalHandle(tag, update, false)
+	content, err := h.readFile(name, true)
+	if err != nil {
+		err = fmt.Errorf("unexpected error reading %s file for tag %s update %s: %w", s.category, tag, update, err)
+	}
+	return content, err
+}
+
+func (s UpdatesFsHandle) WriteFile(tag, update, name, content string) error {
+	if h, err := s.updateLocalHandle(tag, update, true); err != nil {
+		return err
+	} else if err = h.writeFile(name, content, 0o744); err != nil {
+		return fmt.Errorf("unexpected error writing %s file for tag %s update %s: %w", s.category, tag, update, err)
+	}
+	return nil
+}
+
+func (s UpdatesFsHandle) updateLocalHandle(tag, update string, forUpdate bool) (h baseFsHandle, err error) {
+	h.root = filepath.Join(s.root, tag, update, s.category)
+	if forUpdate {
+		if err = h.mkdirs(0o744, true); err != nil {
+			err = fmt.Errorf("unable to create %s file storage for tag %s update %s: %w", s.category, tag, update, err)
 		}
 	}
 	return

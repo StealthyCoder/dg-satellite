@@ -38,6 +38,12 @@ const (
 
 	EventsPrefix = storage.EventsPrefix
 	StatesPrefix = storage.StatesPrefix
+
+	// Per update files/dirs
+	TufRootFile      = storage.TufRootFile
+	TufTimestampFile = storage.TufTimestampFile
+	TufSnapshotFile  = storage.TufSnapshotFile
+	TufTargetsFile   = storage.TufTargetsFile
 )
 
 type Storage struct {
@@ -117,6 +123,14 @@ func (d Device) SaveAppsStates(content string) error {
 		return err
 	}
 	return d.storage.fs.Devices.RolloverFiles(d.Uuid, storage.StatesPrefix, d.storage.maxStates)
+}
+
+func (d Device) GetTufMeta(tag, file string) (string, error) {
+	if d.IsProd {
+		return d.storage.fs.Updates.Prod.Tuf.ReadFile(tag, d.UpdateName, file)
+	} else {
+		return d.storage.fs.Updates.Ci.Tuf.ReadFile(tag, d.UpdateName, file)
+	}
 }
 
 func NewStorage(db *storage.DbHandle, fs *storage.FsHandle) (*Storage, error) {
