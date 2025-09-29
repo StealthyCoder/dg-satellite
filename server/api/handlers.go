@@ -18,5 +18,5 @@ func RegisterHandlers(e *echo.Echo, storage *api.Storage, authFunc auth.AuthUser
 	e.Use(authUser(authFunc))
 
 	e.GET("/devices", h.deviceList, requireScope(auth.ScopeDevicesR))
-
+	e.GET("/devices/:uuid", h.deviceGet, requireScope(auth.ScopeDevicesR))
 }
