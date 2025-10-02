@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 
 type testClient struct {
 	t   *testing.T
+	fs  *storage.FsHandle
 	api *storage.Storage
 	gw  *gatewayStorage.Storage
 	e   *echo.Echo
@@ -64,6 +66,7 @@ func NewTestClient(t *testing.T) *testClient {
 
 	tc := testClient{
 		t:   t,
+		fs:  fsS,
 		api: apiS,
 		gw:  gwS,
 		e:   e,
@@ -72,7 +75,7 @@ func NewTestClient(t *testing.T) *testClient {
 	return &tc
 }
 
-func TestApiList(t *testing.T) {
+func TestApiDeviceList(t *testing.T) {
 	tc := NewTestClient(t)
 	tc.GET("/devices?deny-has-scope=1", 403)
 
@@ -101,7 +104,7 @@ func TestApiList(t *testing.T) {
 	assert.Equal(t, "test-device-2", devices[1].Uuid)
 }
 
-func TestApiGet(t *testing.T) {
+func TestApiDeviceGet(t *testing.T) {
 	tc := NewTestClient(t)
 	tc.GET("/devices/foo?deny-has-scope=1", 403)
 
@@ -122,4 +125,99 @@ func TestApiGet(t *testing.T) {
 	require.Nil(t, json.Unmarshal(data, &device))
 	assert.Equal(t, "test-device-2", device.Uuid)
 	assert.Equal(t, "pubkey2", device.PubKey)
+}
+
+func TestApiUpdateList(t *testing.T) {
+	tc := NewTestClient(t)
+	tc.GET("/updates/ci?deny-has-scope=1", 403)
+	tc.GET("/updates/ci/tag?deny-has-scope=1", 403)
+	tc.GET("/updates/prod?deny-has-scope=1", 403)
+	tc.GET("/updates/prod/tag?deny-has-scope=1", 403)
+
+	tc.GET("/updates/non-prod", 404)
+	tc.GET("/updates/non-prod/tag", 404)
+
+	s := func(data []byte) string {
+		return strings.TrimSpace(string(data))
+	}
+
+	require.Nil(t, tc.fs.Updates.Ci.Rollouts.WriteFile("tag1", "update1", "rollout1", "foo"))
+	require.Nil(t, tc.fs.Updates.Ci.Rollouts.WriteFile("tag1", "update2", "rollout1", "foo"))
+	require.Nil(t, tc.fs.Updates.Ci.Rollouts.WriteFile("tag2", "update1", "rollout1", "foo"))
+	require.Nil(t, tc.fs.Updates.Ci.Rollouts.WriteFile("tag2", "update3", "rollout1", "foo"))
+	require.Nil(t, tc.fs.Updates.Prod.Rollouts.WriteFile("tag1", "update2", "rollout1", "foo"))
+	require.Nil(t, tc.fs.Updates.Prod.Rollouts.WriteFile("tag4", "update42", "rollout1", "foo"))
+
+	data := tc.GET("/updates/ci", 200)
+	assert.Equal(t, `{"tag1":["update1","update2"],"tag2":["update1","update3"]}`, s(data))
+	data = tc.GET("/updates/ci/tag1", 200)
+	assert.Equal(t, `{"tag1":["update1","update2"]}`, s(data))
+	data = tc.GET("/updates/ci/tag2", 200)
+	assert.Equal(t, `{"tag2":["update1","update3"]}`, s(data))
+	data = tc.GET("/updates/ci/tag4", 200) // tag not exists
+	assert.Equal(t, "{}", s(data))
+	data = tc.GET("/updates/prod", 200)
+	assert.Equal(t, `{"tag1":["update2"],"tag4":["update42"]}`, s(data))
+	data = tc.GET("/updates/prod/tag1", 200)
+	assert.Equal(t, `{"tag1":["update2"]}`, s(data))
+	data = tc.GET("/updates/prod/tag2", 200) // tag not exists
+	assert.Equal(t, "{}", s(data))
+	data = tc.GET("/updates/prod/tag4", 200)
+	assert.Equal(t, `{"tag4":["update42"]}`, s(data))
+}
+
+func TestApiRolloutList(t *testing.T) {
+	tc := NewTestClient(t)
+	tc.GET("/updates/ci/tag/update/rollouts?deny-has-scope=1", 403)
+	tc.GET("/updates/prod/tag/update/rollouts?deny-has-scope=1", 403)
+
+	tc.GET("/updates/non-prod/tag/update/rollouts", 404)
+
+	s := func(data []byte) string {
+		return strings.TrimSpace(string(data))
+	}
+
+	require.Nil(t, tc.fs.Updates.Ci.Rollouts.WriteFile("tag1", "update1", "rollout1", "foo"))
+	require.Nil(t, tc.fs.Updates.Ci.Rollouts.WriteFile("tag1", "update1", "rollout2", "foo"))
+	require.Nil(t, tc.fs.Updates.Ci.Rollouts.WriteFile("tag2", "update1", "rollout1", "foo"))
+	require.Nil(t, tc.fs.Updates.Prod.Rollouts.WriteFile("tag1", "update2", "rollout4", "foo"))
+
+	data := tc.GET("/updates/ci/tag1/update1/rollouts", 200)
+	assert.Equal(t, `["rollout1","rollout2"]`, s(data))
+	data = tc.GET("/updates/ci/tag2/update1/rollouts", 200)
+	assert.Equal(t, `["rollout1"]`, s(data))
+	data = tc.GET("/updates/ci/tag2/update2/rollouts", 200) // update not exists
+	assert.Equal(t, "[]", s(data))
+	data = tc.GET("/updates/ci/tag3/update1/rollouts", 200) // tag not exists
+	assert.Equal(t, "[]", s(data))
+	data = tc.GET("/updates/prod/tag1/update2/rollouts", 200)
+	assert.Equal(t, `["rollout4"]`, s(data))
+	data = tc.GET("/updates/ci/tag2/update2/rollouts", 200) // tag not exists
+	assert.Equal(t, "[]", s(data))
+}
+
+func TestApiRolloutGet(t *testing.T) {
+	tc := NewTestClient(t)
+	tc.GET("/updates/ci/tag/update/rollouts/rolling?deny-has-scope=1", 403)
+	tc.GET("/updates/prod/tag/update/rollouts/stones?deny-has-scope=1", 403)
+
+	tc.GET("/updates/non-prod/tag/update/rollouts/rocks", 404)
+
+	s := func(data []byte) string {
+		return strings.TrimSpace(string(data))
+	}
+
+	require.Nil(t, tc.fs.Updates.Ci.Rollouts.WriteFile("tag1", "update1", "rollout1", `{"uuids":["123","xyz"]}`))
+	require.Nil(t, tc.fs.Updates.Ci.Rollouts.WriteFile("tag1", "update2", "rollout2", `{"groups":["test","dev"]}`))
+	require.Nil(t, tc.fs.Updates.Prod.Rollouts.WriteFile("tag", "update", "rollout", `{"uuids":["uh"],"groups":["oh"]}`))
+
+	data := tc.GET("/updates/ci/tag1/update1/rollouts/rollout1", 200)
+	assert.Equal(t, `{"uuids":["123","xyz"]}`, s(data))
+	data = tc.GET("/updates/ci/tag1/update2/rollouts/rollout2", 200)
+	assert.Equal(t, `{"groups":["test","dev"]}`, s(data))
+	tc.GET("/updates/ci/tag1/update2/rollouts/rollout3", 404) // rollout not exists
+	tc.GET("/updates/ci/tag1/update3/rollouts/rollout1", 404) // update not exists
+	tc.GET("/updates/ci/tag2/update1/rollouts/rollout1", 404) // tag not exists
+	data = tc.GET("/updates/prod/tag/update/rollouts/rollout", 200)
+	assert.Equal(t, `{"uuids":["uh"],"groups":["oh"]}`, s(data))
 }

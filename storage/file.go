@@ -36,8 +36,9 @@ const (
 	UpdatesCiDir   = "ci"
 	UpdatesProdDir = "prod"
 	// Update categories
-	UpdatesTufDir    = "tuf"
-	UpdatesOstreeDir = "ostree_repo"
+	UpdatesTufDir      = "tuf"
+	UpdatesOstreeDir   = "ostree_repo"
+	UpdatesRolloutsDir = "rollouts"
 	// TUF category files
 	TufRootFile      = "root.json"
 	TufTimestampFile = "timestamp.json"
@@ -82,12 +83,14 @@ type FsHandle struct {
 	Devices DevicesFsHandle
 	Updates struct {
 		Ci struct {
-			Ostree UpdatesFsHandle
-			Tuf    UpdatesFsHandle
+			Ostree   UpdatesFsHandle
+			Tuf      UpdatesFsHandle
+			Rollouts RolloutsFsHandle
 		}
 		Prod struct {
-			Ostree UpdatesFsHandle
-			Tuf    UpdatesFsHandle
+			Ostree   UpdatesFsHandle
+			Tuf      UpdatesFsHandle
+			Rollouts RolloutsFsHandle
 		}
 	}
 }
@@ -98,10 +101,14 @@ func NewFs(root string) (*FsHandle, error) {
 	fs.Devices.root = fs.Config.DevicesDir()
 	fs.Updates.Ci.Ostree.root = fs.Config.UpdatesCiDir()
 	fs.Updates.Ci.Ostree.category = UpdatesOstreeDir
+	fs.Updates.Ci.Rollouts.root = fs.Config.UpdatesCiDir()
+	fs.Updates.Ci.Rollouts.category = UpdatesRolloutsDir
 	fs.Updates.Ci.Tuf.root = fs.Config.UpdatesCiDir()
 	fs.Updates.Ci.Tuf.category = UpdatesTufDir
 	fs.Updates.Prod.Ostree.root = fs.Config.UpdatesProdDir()
 	fs.Updates.Prod.Ostree.category = UpdatesOstreeDir
+	fs.Updates.Prod.Rollouts.root = fs.Config.UpdatesProdDir()
+	fs.Updates.Prod.Rollouts.category = UpdatesRolloutsDir
 	fs.Updates.Prod.Tuf.root = fs.Config.UpdatesProdDir()
 	fs.Updates.Prod.Tuf.category = UpdatesTufDir
 
@@ -254,6 +261,49 @@ func (s UpdatesFsHandle) updateLocalHandle(tag, update string, forUpdate bool) (
 	return
 }
 
+type RolloutsFsHandle struct {
+	UpdatesFsHandle
+}
+
+func (s RolloutsFsHandle) ListUpdates(tag string) (map[string][]string, error) {
+	// An assumption is that we will have a limited amount of tags.
+	// In this case it is just fine to list all available updates for all tags at once.
+	var tagDirs []string
+	if len(tag) > 0 {
+		tagDirs = []string{tag}
+	} else if dirs, err := os.ReadDir(s.root); err == nil {
+		for _, d := range dirs {
+			if d.IsDir() {
+				tagDirs = append(tagDirs, d.Name())
+			}
+		}
+	} else if os.IsNotExist(err) {
+		return nil, nil
+	} else {
+		return nil, err
+	}
+
+	res := make(map[string][]string, len(tagDirs))
+	for _, tag = range tagDirs {
+		if dirs, err := os.ReadDir(filepath.Join(s.root, tag)); err == nil {
+			res[tag] = make([]string, 0, len(dirs))
+			for _, d := range dirs {
+				if d.IsDir() {
+					res[tag] = append(res[tag], d.Name())
+				}
+			}
+		} else if !os.IsNotExist(err) {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (s RolloutsFsHandle) ListFiles(tag, update string) ([]string, error) {
+	h, _ := s.updateLocalHandle(tag, update, false)
+	return h.matchFiles("", true)
+}
+
 type baseFsHandle struct {
 	root string
 }
@@ -317,7 +367,7 @@ func (s baseFsHandle) matchFiles(prefix string, sortByModTime bool) ([]string, e
 	for _, entry := range entries {
 		if info, err := entry.Info(); err != nil {
 			return nil, err
-		} else if strings.HasPrefix(info.Name(), prefix) {
+		} else if len(prefix) == 0 || strings.HasPrefix(info.Name(), prefix) {
 			infos = append(infos, info)
 		}
 	}

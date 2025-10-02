@@ -12,7 +12,11 @@ import (
 	"github.com/foundriesio/dg-satellite/storage"
 )
 
-type OrderBy string
+type (
+	OrderBy string
+
+	FsHandle = storage.FsHandle
+)
 
 const (
 	OrderByDeviceLastSeenDsc OrderBy = "last-seen-desc"
@@ -65,6 +69,11 @@ type Device struct {
 	NetInfo string `json:"network-info"`
 
 	storage Storage
+}
+
+type Rollout struct {
+	Uuids  []string `json:"uuids,omitempty"`
+	Groups []string `json:"groups,omitempty"`
 }
 
 type Storage struct {
@@ -141,6 +150,35 @@ func (s Storage) DeviceGet(uuid string) (*Device, error) {
 	}
 
 	return &d, nil
+}
+
+func (s Storage) ListUpdates(tag string, isProd bool) (map[string][]string, error) {
+	if isProd {
+		return s.fs.Updates.Prod.Rollouts.ListUpdates(tag)
+	} else {
+		return s.fs.Updates.Ci.Rollouts.ListUpdates(tag)
+	}
+}
+
+func (s Storage) ListRollouts(tag, updateName string, isProd bool) ([]string, error) {
+	if isProd {
+		return s.fs.Updates.Prod.Rollouts.ListFiles(tag, updateName)
+	} else {
+		return s.fs.Updates.Ci.Rollouts.ListFiles(tag, updateName)
+	}
+}
+
+func (s Storage) GetRollout(tag, updateName, rolloutName string, isProd bool) (res Rollout, err error) {
+	var content string
+	if isProd {
+		content, err = s.fs.Updates.Prod.Rollouts.ReadFile(tag, updateName, rolloutName)
+	} else {
+		content, err = s.fs.Updates.Ci.Rollouts.ReadFile(tag, updateName, rolloutName)
+	}
+	if err == nil {
+		err = json.Unmarshal([]byte(content), &res)
+	}
+	return
 }
 
 func (s Storage) SetUpdateName(uuids []string, updateName string) error {
