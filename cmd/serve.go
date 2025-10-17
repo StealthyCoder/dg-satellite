@@ -65,7 +65,7 @@ func (c *ServeCmd) Run(args CommonArgs) error {
 
 	var wg sync.WaitGroup
 	wg.Add(2)
-	for _, srv := range []*server.Server{apiServer, gtwServer} {
+	for _, srv := range []server.Server{apiServer, gtwServer} {
 		go func() {
 			srv.Shutdown(time.Minute)
 			wg.Done()

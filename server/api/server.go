@@ -14,7 +14,7 @@ import (
 
 const serverName = "rest-api"
 
-func NewServer(ctx Context, db *storage.DbHandle, fs *storage.FsHandle, port uint16, authFunc auth.AuthUserFunc) (*server.Server, error) {
+func NewServer(ctx Context, db *storage.DbHandle, fs *storage.FsHandle, port uint16, authFunc auth.AuthUserFunc) (server.Server, error) {
 	strg, err := api.NewStorage(db, fs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load %s storage: %w", serverName, err)
@@ -22,5 +22,5 @@ func NewServer(ctx Context, db *storage.DbHandle, fs *storage.FsHandle, port uin
 	e := server.NewEchoServer()
 	srv := server.NewServer(ctx, e, serverName, port, nil)
 	RegisterHandlers(e, strg, authFunc)
-	return &srv, nil
+	return srv, nil
 }
