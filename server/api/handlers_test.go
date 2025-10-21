@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
@@ -56,15 +55,15 @@ func generateUpdateEvents(corId, pack string) []storage.DeviceUpdateEvent {
 
 type testClient struct {
 	t   *testing.T
+	ctx Context
 	fs  *apiStorage.FsHandle
 	api *apiStorage.Storage
 	gw  *gatewayStorage.Storage
 	e   *echo.Echo
-	log *slog.Logger
 }
 
 func (c testClient) Do(req *http.Request) *httptest.ResponseRecorder {
-	req = req.WithContext(CtxWithLog(req.Context(), c.log))
+	req = req.WithContext(c.ctx)
 	rec := httptest.NewRecorder()
 	c.e.ServeHTTP(rec, req)
 	return rec
@@ -106,6 +105,7 @@ func (c testClient) marshalBody(data any) io.Reader {
 }
 
 func NewTestClient(t *testing.T) *testClient {
+	ctx := context.Background()
 	tmpDir := t.TempDir()
 	fsS, err := apiStorage.NewFs(tmpDir)
 	require.Nil(t, err)
@@ -118,17 +118,18 @@ func NewTestClient(t *testing.T) *testClient {
 
 	log, err := context.InitLogger("debug")
 	require.Nil(t, err)
+	ctx = CtxWithLog(ctx, log)
 
 	e := server.NewEchoServer()
 	RegisterHandlers(e, apiS, auth.FakeAuthUser)
 
 	tc := testClient{
 		t:   t,
+		ctx: ctx,
 		fs:  fsS,
 		api: apiS,
 		gw:  gwS,
 		e:   e,
-		log: log,
 	}
 	return &tc
 }
