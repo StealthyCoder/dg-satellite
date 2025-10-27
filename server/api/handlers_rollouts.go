@@ -4,6 +4,7 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -152,6 +153,36 @@ func (h *handlers) rolloutPut(c echo.Context) error {
 	return c.NoContent(http.StatusAccepted)
 }
 
+// @Summary Tail rollout logs
+// @Produce text
+// @Success 200
+// @Router  /updates/{prod}/{tag}/rollouts/{rollout}/tail [get]
+func (h *handlers) rolloutTail(c echo.Context) error {
+	ctx := c.Request().Context()
+	isProd := CtxGetIsProd(ctx)
+	tag := c.Param("tag")
+	updateName := c.Param("update")
+	rolloutName := c.Param("rollout")
+	if rollout, err := h.storage.GetRollout(tag, updateName, rolloutName, isProd); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return EchoError(c, err, http.StatusNotFound, "Not found rollout")
+		} else {
+			return EchoError(c, err, http.StatusInternalServerError, "Failed to look up update rollout")
+		}
+	} else if !rollout.Commit {
+		// Notify the client to retry later with a single error event.
+		reader := func(yield func(string, error) bool) {
+			yield("", errors.New("Rollout was not yet committed"))
+		}
+		return streamUpdateLogs(c, reader)
+	} else {
+		// Read file infinitely until client disconnects (writes to ctx.Done() channel).
+		reader := h.storage.TailRolloutsLog(tag, updateName, isProd, ctx.Done())
+		reader = filterUpdateLogs(rollout.Effect, reader)
+		return streamUpdateLogs(c, reader)
+	}
+}
+
 func validateUpdateParams(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		req := c.Request()
@@ -257,6 +288,24 @@ func streamUpdateLogs(c echo.Context, reader iter.Seq2[string, error]) error {
 		r.Flush()
 	}
 	return nil
+}
+
+func filterUpdateLogs(uuids []string, reader iter.Seq2[string, error]) iter.Seq2[string, error] {
+	return func(yield func(string, error) bool) {
+		for line, err := range reader {
+			if err == nil {
+				var status storage.DeviceStatus
+				if err = json.Unmarshal([]byte(line), &status); err == nil {
+					if !slices.Contains(uuids, status.Uuid) {
+						continue
+					}
+				}
+			}
+			if !yield(line, err) {
+				break
+			}
+		}
+	}
 }
 
 var (

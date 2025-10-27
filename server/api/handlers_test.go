@@ -610,4 +610,6 @@ data: {"uuid":"test-device-1","correlationId":"uuid-1","target-name":"intel-core
 	tc.assertDone(done1)
 	tc.assertDone(done2)
 	tc.assertDone(done3)
+
+	// TODO: Add rollout tail tests
 }

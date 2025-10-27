@@ -17,6 +17,8 @@ type (
 	OrderBy string
 
 	FsHandle = storage.FsHandle
+
+	DeviceStatus = storage.DeviceStatus
 )
 
 const (

@@ -35,5 +35,6 @@ func RegisterHandlers(e *echo.Echo, storage *storage.Storage, authFunc auth.Auth
 	upd.GET("/:tag/:update/rollouts", h.rolloutList, requireScope(auth.ScopeDevicesR))
 	upd.GET("/:tag/:update/rollouts/:rollout", h.rolloutGet, requireScope(auth.ScopeDevicesR))
 	upd.PUT("/:tag/:update/rollouts/:rollout", h.rolloutPut, requireScope(auth.ScopeDevicesRU))
+	upd.GET("/:tag/:update/rollouts/:rollout/tail", h.rolloutTail, requireScope(auth.ScopeDevicesR))
 	upd.GET("/:tag/:update/tail", h.updateTail, requireScope(auth.ScopeDevicesR))
 }
