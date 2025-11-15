@@ -92,47 +92,42 @@ type FsHandle struct {
 	Certs   CertsFsHandle
 	Devices DevicesFsHandle
 	Updates struct {
-		Ci struct {
-			Apps     UpdatesFsHandle
-			Ostree   UpdatesFsHandle
-			Tuf      UpdatesFsHandle
-			Rollouts RolloutsFsHandle
-			Logs     UpdatesFsHandle
-		}
-		Prod struct {
-			Apps     UpdatesFsHandle
-			Ostree   UpdatesFsHandle
-			Tuf      UpdatesFsHandle
-			Rollouts RolloutsFsHandle
-			Logs     UpdatesFsHandle
-		}
+		Ci   updatesFsHandleWrap
+		Prod updatesFsHandleWrap
 	}
+}
+
+type updatesFsHandleWrap struct {
+	Apps     UpdatesFsHandle
+	Ostree   UpdatesFsHandle
+	Tuf      UpdatesFsHandle
+	Rollouts RolloutsFsHandle
+	Logs     UpdatesFsHandle
 }
 
 func NewFs(root string) (*FsHandle, error) {
 	fs := &FsHandle{Config: FsConfig(root)}
 	fs.Certs.root = fs.Config.CertsDir()
 	fs.Devices.root = fs.Config.DevicesDir()
-	fs.Updates.Ci.Apps.root = fs.Config.UpdatesCiDir()
-	fs.Updates.Ci.Apps.category = UpdatesAppsDir
-	fs.Updates.Ci.Ostree.root = fs.Config.UpdatesCiDir()
-	fs.Updates.Ci.Ostree.category = UpdatesOstreeDir
-	fs.Updates.Ci.Rollouts.root = fs.Config.UpdatesCiDir()
-	fs.Updates.Ci.Rollouts.category = UpdatesRolloutsDir
-	fs.Updates.Ci.Tuf.root = fs.Config.UpdatesCiDir()
-	fs.Updates.Ci.Tuf.category = UpdatesTufDir
-	fs.Updates.Ci.Logs.root = fs.Config.UpdatesCiDir()
-	fs.Updates.Ci.Logs.category = UpdatesLogsDir
-	fs.Updates.Prod.Apps.root = fs.Config.UpdatesProdDir()
-	fs.Updates.Prod.Apps.category = UpdatesAppsDir
-	fs.Updates.Prod.Ostree.root = fs.Config.UpdatesProdDir()
-	fs.Updates.Prod.Ostree.category = UpdatesOstreeDir
-	fs.Updates.Prod.Rollouts.root = fs.Config.UpdatesProdDir()
-	fs.Updates.Prod.Rollouts.category = UpdatesRolloutsDir
-	fs.Updates.Prod.Tuf.root = fs.Config.UpdatesProdDir()
-	fs.Updates.Prod.Tuf.category = UpdatesTufDir
-	fs.Updates.Prod.Logs.root = fs.Config.UpdatesProdDir()
-	fs.Updates.Prod.Logs.category = UpdatesLogsDir
+
+	for _, h := range []struct {
+		handle *updatesFsHandleWrap
+		root   string
+	}{
+		{&fs.Updates.Ci, fs.Config.UpdatesCiDir()},
+		{&fs.Updates.Prod, fs.Config.UpdatesProdDir()},
+	} {
+		h.handle.Apps.root = h.root
+		h.handle.Apps.category = UpdatesAppsDir
+		h.handle.Ostree.root = h.root
+		h.handle.Ostree.category = UpdatesOstreeDir
+		h.handle.Rollouts.root = h.root
+		h.handle.Rollouts.category = UpdatesRolloutsDir
+		h.handle.Tuf.root = h.root
+		h.handle.Tuf.category = UpdatesTufDir
+		h.handle.Logs.root = h.root
+		h.handle.Logs.category = UpdatesLogsDir
+	}
 
 	for _, h := range []struct {
 		handle baseFsHandle
