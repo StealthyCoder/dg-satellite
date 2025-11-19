@@ -79,6 +79,18 @@ func createTables(db *sql.DB) error {
 			deleted        BOOL DEFAULT 0,
 			allowed_scopes INT DEFAULT 0
 		);
+
+		CREATE TABLE tokens (
+			public_id      INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id        INT,
+			created_at     INT,
+			expires_at     INT,
+			description    VARCHAR(80),
+			scopes         INT,
+			value          VARCHAR(60) NOT NULL UNIQUE,
+
+			FOREIGN KEY(user_id) REFERENCES user(id)
+		);
 	`
 	if _, err := db.Exec(sqlStmt); err != nil {
 		return fmt.Errorf("unable to create devices db: %w", err)

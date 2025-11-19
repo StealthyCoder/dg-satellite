@@ -5,6 +5,7 @@ package users
 
 import (
 	"database/sql"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -28,7 +29,10 @@ type User struct {
 
 func (u User) Delete() error {
 	u.Deleted = true
-	return u.h.stmtUserUpdate.run(u)
+	if err := u.h.stmtTokenDeleteAll.run(u); err != nil {
+		return fmt.Errorf("unable to delete user while deleting tokens: %w", err)
+	}
+	return u.Update()
 }
 
 func (u User) Update() error {
@@ -39,23 +43,43 @@ type Storage struct {
 	db *storage.DbHandle
 	fs *storage.FsHandle
 
+	hmacSecret []byte
+
 	stmtUserCreate    stmtUserCreate
+	stmtUserGetById   stmtUserGetById
 	stmtUserGetByName stmtUserGetByName
 	stmtUserList      stmtUserList
 	stmtUserUpdate    stmtUserUpdate
+
+	stmtTokenCreate    stmtTokenCreate
+	stmtTokenDelete    stmtTokenDelete
+	stmtTokenDeleteAll stmtTokenDeleteAll
+	stmtTokenList      stmtTokenList
+	stmtTokenLookup    stmtTokenLookup
 }
 
 func NewStorage(db *storage.DbHandle, fs *storage.FsHandle) (*Storage, error) {
+	hmacSecret, err := fs.Certs.ReadFile(storage.HmacFile)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read HMAC secret for API tokens: %w", err)
+	}
 	handle := Storage{
-		db: db,
-		fs: fs,
+		db:         db,
+		fs:         fs,
+		hmacSecret: hmacSecret,
 	}
 
 	if err := db.InitStmt(
 		&handle.stmtUserCreate,
+		&handle.stmtUserGetById,
 		&handle.stmtUserGetByName,
 		&handle.stmtUserList,
 		&handle.stmtUserUpdate,
+		&handle.stmtTokenCreate,
+		&handle.stmtTokenDelete,
+		&handle.stmtTokenDeleteAll,
+		&handle.stmtTokenList,
+		&handle.stmtTokenLookup,
 	); err != nil {
 		return nil, err
 	}
@@ -122,6 +146,30 @@ func (s *stmtUserCreate) run(u *User) error {
 		u.id = id
 	}
 	return nil
+}
+
+type stmtUserGetById storage.DbStmt
+
+func (s *stmtUserGetById) Init(db storage.DbHandle) (err error) {
+	s.Stmt, err = db.Prepare("userGetId", `
+		SELECT id, username, password, email, created_at, allowed_scopes
+		FROM users
+		WHERE id = ? and deleted = false`,
+	)
+	return
+}
+
+func (s *stmtUserGetById) run(id int64) (*User, error) {
+	u := User{}
+	err := s.Stmt.QueryRow(id).Scan(
+		&u.id,
+		&u.Username,
+		&u.Password,
+		&u.Email,
+		&u.CreatedAt,
+		&u.AllowedScopes,
+	)
+	return &u, err
 }
 
 type stmtUserGetByName storage.DbStmt
@@ -194,7 +242,7 @@ type stmtUserUpdate storage.DbStmt
 
 func (s *stmtUserUpdate) Init(db storage.DbHandle) (err error) {
 	s.Stmt, err = db.Prepare("userUpdate", `
-		UPDATE users 
+		UPDATE users
 		SET username = ?, password = ?, email = ?, allowed_scopes = ?, deleted = ?
 		WHERE id = ?`,
 	)

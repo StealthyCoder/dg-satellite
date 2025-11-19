@@ -30,6 +30,7 @@ const (
 	CertsTlsCsrFile = "tls.csr"
 	CertsTlsKeyFile = "tls.key"
 	CertsTlsPemFile = "tls.pem"
+	HmacFile        = "hmac.secret"
 
 	// Per device files/dirs
 	AktomlFile   = "aktoml"
