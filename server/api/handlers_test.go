@@ -446,9 +446,8 @@ func TestApiRolloutPut(t *testing.T) {
 }
 
 func TestApiRolloutDaemon(t *testing.T) {
-	rolloutRolloverInterval = 20 * time.Millisecond
 	tc := NewTestClient(t)
-	daemons := NewDaemons(tc.ctx, tc.api)
+	daemons := NewDaemons(tc.ctx, tc.api, WithRolloverInterval(20*time.Millisecond))
 	daemons.Start()
 	defer daemons.Shutdown()
 

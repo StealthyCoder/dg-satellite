@@ -9,8 +9,6 @@ import (
 	"time"
 )
 
-var rolloutRolloverInterval = 5 * time.Minute
-
 func (d *daemons) rolloutWatchdog(isProd bool) daemonFunc {
 	// Watch for a file once every 5 minutes.
 	// API handlers have 5 minutes to write to the file after it was moved.
@@ -32,7 +30,7 @@ func (d *daemons) rolloutWatchdog(isProd bool) daemonFunc {
 			select {
 			case <-stop:
 				return
-			case <-time.After(rolloutRolloverInterval):
+			case <-time.After(d.rolloutOptions.interval):
 			}
 		}
 	}
