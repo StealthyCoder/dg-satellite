@@ -1,26 +1,40 @@
 // Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
-package api
+package daemons
 
 import (
+	"context"
+	"time"
+
 	storage "github.com/foundriesio/dg-satellite/storage/api"
 )
 
 type daemonFunc func(stop chan bool)
 
+type Option func(*daemons)
+
 type daemons struct {
-	context Context
+	context context.Context
 	storage *storage.Storage
 	daemons []daemonFunc
 	stops   []chan bool
+
+	rolloutOptions rolloutOptions
 }
 
-func NewDaemons(context Context, storage *storage.Storage) *daemons {
+func New(context context.Context, storage *storage.Storage, opts ...Option) *daemons {
 	d := &daemons{context: context, storage: storage}
+	d.rolloutOptions = rolloutOptions{
+		interval: 5 * time.Minute,
+	}
 	d.daemons = []daemonFunc{
 		d.rolloutWatchdog(true),
 		d.rolloutWatchdog(false),
+	}
+
+	for _, opt := range opts {
+		opt(d)
 	}
 	return d
 }
