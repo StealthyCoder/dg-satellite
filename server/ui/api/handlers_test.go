@@ -519,7 +519,14 @@ func TestApiRolloutPut(t *testing.T) {
 
 func TestApiRolloutDaemon(t *testing.T) {
 	tc := NewTestClient(t)
-	daemons := daemons.New(tc.ctx, tc.api, daemons.WithRolloverInterval(20*time.Millisecond))
+
+	require.Nil(t, tc.fs.Certs.WriteFile(storage.HmacFile, []byte("123")))
+	db, err := apiStorage.NewDb(filepath.Join(t.TempDir(), apiStorage.DbFile))
+	require.Nil(t, err)
+	usersS, err := users.NewStorage(db, tc.fs)
+	require.Nil(t, err)
+	daemons := daemons.New(tc.ctx, tc.api, usersS, daemons.WithRolloverInterval(20*time.Millisecond))
+
 	daemons.Start()
 	defer daemons.Shutdown()
 	tc.u.AllowedScopes = users.ScopeDevicesR

@@ -43,10 +43,12 @@ func NewServer(ctx context.Context, db *storage.DbHandle, fs *storage.FsHandle, 
 	}
 	slog.Info("Using authentication provider", "name", provider.Name())
 
+	daemons := daemons.New(ctx, strg, users)
+
 	srv := server.NewServer(ctx, e, serverName, port, nil)
 	apiHandlers.RegisterHandlers(e, strg, provider)
 	webHandlers.RegisterHandlers(e, users, provider)
-	return &apiServer{server: srv, daemons: daemons.New(ctx, strg)}, nil
+	return &apiServer{server: srv, daemons: daemons}, nil
 }
 
 type apiServer struct {
