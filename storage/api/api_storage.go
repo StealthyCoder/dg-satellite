@@ -18,6 +18,7 @@ type (
 
 	FsHandle = storage.FsHandle
 
+	AppsStates   = storage.AppsStates
 	DeviceStatus = storage.DeviceStatus
 )
 
@@ -404,4 +405,25 @@ func (d Device) Events(updateId string) ([]storage.DeviceUpdateEvent, error) {
 		}
 	}
 	return events, nil
+}
+
+func (d Device) AppsStates() ([]AppsStates, error) {
+	names, err := d.storage.fs.Devices.ListFiles(d.Uuid, storage.StatesPrefix, true)
+	if err != nil {
+		return nil, err
+	}
+
+	states := make([]AppsStates, len(names))
+	for i, name := range names {
+		content, err := d.storage.fs.Devices.ReadFile(d.Uuid, name)
+		if err != nil {
+			return nil, err
+		}
+		var s AppsStates
+		if err := json.Unmarshal([]byte(content), &s); err != nil {
+			return nil, fmt.Errorf("unexpected error unmarshalling apps states json: %w", err)
+		}
+		states[len(names)-1-i] = s //store in reverse order
+	}
+	return states, nil
 }
