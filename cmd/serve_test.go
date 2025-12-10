@@ -22,9 +22,9 @@ func TestServe(t *testing.T) {
 	common := CommonArgs{DataDir: tmpDir}
 	fs, err := storage.NewFs(common.DataDir)
 	require.Nil(t, err)
-	require.Nil(t, fs.Certs.WriteFile("hmac.secret", []byte("random")))
+	require.Nil(t, fs.Auth.InitHmacSecret())
 	authConfig := `{"Type": "noauth"}`
-	require.Nil(t, os.WriteFile(filepath.Join(tmpDir, "auth-config.json"), []byte(authConfig), 0o640))
+	require.Nil(t, os.WriteFile(filepath.Join(fs.Config.AuthDir(), "auth-config.json"), []byte(authConfig), 0o640))
 	apiAddress := ""
 	gatewayAddress := ""
 	wait := make(chan bool)

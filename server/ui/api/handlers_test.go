@@ -520,7 +520,7 @@ func TestApiRolloutPut(t *testing.T) {
 func TestApiRolloutDaemon(t *testing.T) {
 	tc := NewTestClient(t)
 
-	require.Nil(t, tc.fs.Certs.WriteFile(storage.HmacFile, []byte("123")))
+	require.Nil(t, tc.fs.Auth.InitHmacSecret())
 	db, err := apiStorage.NewDb(filepath.Join(t.TempDir(), apiStorage.DbFile))
 	require.Nil(t, err)
 	usersS, err := users.NewStorage(db, tc.fs)

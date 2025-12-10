@@ -43,7 +43,7 @@ type Provider interface {
 var providers map[string]Provider
 
 func NewProvider(e *echo.Echo, db *storage.DbHandle, fs *storage.FsHandle, users *users.Storage) (Provider, error) {
-	authConfig, err := fs.GetAuthConfig()
+	authConfig, err := fs.Auth.GetAuthConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get auth config: %w", err)
 	}

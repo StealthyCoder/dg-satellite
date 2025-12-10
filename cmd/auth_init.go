@@ -4,9 +4,6 @@
 package main
 
 import (
-	"crypto/rand"
-	"fmt"
-
 	"github.com/foundriesio/dg-satellite/storage"
 )
 
@@ -18,16 +15,5 @@ func (c AuthInitCmd) Run(args CommonArgs) error {
 	if err != nil {
 		return err
 	}
-
-	if _, err := fs.Certs.ReadFile(storage.HmacFile); err != nil {
-		fmt.Println("Initializing new HMAC secret")
-		secret := make([]byte, 64)
-		if _, err := rand.Read(secret); err != nil {
-			return fmt.Errorf("generating HMAC secret: %w", err)
-		}
-		if err := fs.Certs.WriteFile(storage.HmacFile, secret); err != nil {
-			return fmt.Errorf("storing HMAC secret: %w", err)
-		}
-	}
-	return nil
+	return fs.Auth.InitHmacSecret()
 }

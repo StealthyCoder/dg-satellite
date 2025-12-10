@@ -20,7 +20,7 @@ func TestNewStorage(t *testing.T) {
 	fs, err := storage.NewFs(tmpdir)
 	require.Nil(t, err)
 
-	require.Nil(t, fs.Certs.WriteFile("hmac.secret", []byte("random")))
+	require.Nil(t, fs.Auth.InitHmacSecret())
 
 	users, err := NewStorage(db, fs)
 	require.Nil(t, err)
@@ -92,8 +92,7 @@ func TestTokens(t *testing.T) {
 	require.Nil(t, err)
 	fs, err := storage.NewFs(tmpdir)
 	require.Nil(t, err)
-
-	require.Nil(t, fs.Certs.WriteFile("hmac.secret", []byte("random")))
+	require.Nil(t, fs.Auth.InitHmacSecret())
 
 	users, err := NewStorage(db, fs)
 	require.Nil(t, err)
@@ -175,8 +174,7 @@ func TestGc(t *testing.T) {
 	require.Nil(t, err)
 	fs, err := storage.NewFs(tmpdir)
 	require.Nil(t, err)
-
-	require.Nil(t, fs.Certs.WriteFile("hmac.secret", []byte("random")))
+	require.Nil(t, fs.Auth.InitHmacSecret())
 
 	users, err := NewStorage(db, fs)
 	require.Nil(t, err)

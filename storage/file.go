@@ -19,12 +19,11 @@ import (
 const (
 	// Global files/dirs
 	AuditDir   = "audit"
+	AuthDir    = "auth"
 	CertsDir   = "certs"
 	DbFile     = "db.sqlite"
 	DevicesDir = "devices"
 	UpdatesDir = "updates"
-
-	AuthConfigFile = "auth-config.json"
 
 	partialFileSuffix  = "..part"
 	rolloutJournalFile = "rollouts.journal"
@@ -33,7 +32,9 @@ const (
 	CertsTlsCsrFile = "tls.csr"
 	CertsTlsKeyFile = "tls.key"
 	CertsTlsPemFile = "tls.pem"
-	HmacFile        = "hmac.secret"
+
+	AuthConfigFile = "auth-config.json"
+	HmacFile       = "hmac.secret"
 
 	// Per device files/dirs
 	AktomlFile   = "aktoml"
@@ -74,8 +75,8 @@ func (c FsConfig) AuditDir() string {
 	return filepath.Join(string(c), AuditDir)
 }
 
-func (c FsConfig) AuthConfigFile() string {
-	return filepath.Join(string(c), AuthConfigFile)
+func (c FsConfig) AuthDir() string {
+	return filepath.Join(string(c), AuthDir)
 }
 
 func (c FsConfig) DbFile() string {
@@ -106,6 +107,7 @@ type FsHandle struct {
 	Config FsConfig
 
 	Audit   AuditLogsFsHandle
+	Auth    AuthFsHandle
 	Certs   CertsFsHandle
 	Devices DevicesFsHandle
 	Updates struct {
@@ -125,6 +127,7 @@ type updatesFsHandleWrap struct {
 func NewFs(root string) (*FsHandle, error) {
 	fs := &FsHandle{Config: FsConfig(root)}
 	fs.Audit.root = fs.Config.AuditDir()
+	fs.Auth.root = fs.Config.AuthDir()
 	fs.Certs.root = fs.Config.CertsDir()
 	fs.Devices.root = fs.Config.DevicesDir()
 
@@ -152,6 +155,7 @@ func NewFs(root string) (*FsHandle, error) {
 		mode   os.FileMode
 	}{
 		{fs.Audit.baseFsHandle, 0o744},
+		{fs.Auth.baseFsHandle, 0o744},
 		{fs.Certs.baseFsHandle, 0o744},
 		{fs.Devices.baseFsHandle, 0o740},
 		// All updates categories have the same base dir, so only one of Ci/prod is needed.

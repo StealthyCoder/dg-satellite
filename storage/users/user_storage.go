@@ -68,7 +68,7 @@ type Storage struct {
 }
 
 func NewStorage(db *storage.DbHandle, fs *storage.FsHandle) (*Storage, error) {
-	hmacSecret, err := fs.Certs.ReadFile(storage.HmacFile)
+	hmacSecret, err := fs.Auth.GetHmacSecret()
 	if err != nil {
 		return nil, fmt.Errorf("unable to read HMAC secret for API tokens: %w", err)
 	}
