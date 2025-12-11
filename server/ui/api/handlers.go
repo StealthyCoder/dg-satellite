@@ -9,6 +9,7 @@ import (
 	"github.com/foundriesio/dg-satellite/auth"
 	"github.com/foundriesio/dg-satellite/server"
 	storage "github.com/foundriesio/dg-satellite/storage/api"
+	"github.com/foundriesio/dg-satellite/storage/users"
 )
 
 type handlers struct {
@@ -22,21 +23,21 @@ func RegisterHandlers(e *echo.Echo, storage *storage.Storage, authFunc auth.Auth
 	g := e.Group("/v1")
 	g.Use(authUser(authFunc))
 
-	g.GET("/devices", h.deviceList, requireScope(auth.ScopeDevicesR))
-	g.GET("/devices/:uuid", h.deviceGet, requireScope(auth.ScopeDevicesR))
-	g.GET("/devices/:uuid/apps-states", h.deviceAppsStatesGet, requireScope(auth.ScopeDevicesR))
-	g.GET("/devices/:uuid/updates", h.deviceUpdatesList, requireScope(auth.ScopeDevicesR))
-	g.GET("/devices/:uuid/updates/:id", h.deviceUpdatesGet, requireScope(auth.ScopeDevicesR))
+	g.GET("/devices", h.deviceList, requireScope(users.ScopeDevicesR))
+	g.GET("/devices/:uuid", h.deviceGet, requireScope(users.ScopeDevicesR))
+	g.GET("/devices/:uuid/apps-states", h.deviceAppsStatesGet, requireScope(users.ScopeDevicesR))
+	g.GET("/devices/:uuid/updates", h.deviceUpdatesList, requireScope(users.ScopeDevicesR))
+	g.GET("/devices/:uuid/updates/:id", h.deviceUpdatesGet, requireScope(users.ScopeDevicesR))
 	// In updates APIs :prod path element can be either "prod" or "ci".
 	upd := g.Group("/updates/:prod")
 	upd.Use(validateUpdateParams)
-	upd.GET("", h.updateList, requireScope(auth.ScopeDevicesR))
-	upd.GET("/:tag", h.updateList, requireScope(auth.ScopeDevicesR))
+	upd.GET("", h.updateList, requireScope(users.ScopeDevicesR))
+	upd.GET("/:tag", h.updateList, requireScope(users.ScopeDevicesR))
 	// TODO: What data would we want to show for an update?
-	// upd.GET("/:tag/:update", h.updateGet, requireScope(auth.ScopeDevicesR))
-	upd.GET("/:tag/:update/rollouts", h.rolloutList, requireScope(auth.ScopeDevicesR))
-	upd.GET("/:tag/:update/rollouts/:rollout", h.rolloutGet, requireScope(auth.ScopeDevicesR))
-	upd.PUT("/:tag/:update/rollouts/:rollout", h.rolloutPut, requireScope(auth.ScopeDevicesRU))
-	upd.GET("/:tag/:update/rollouts/:rollout/tail", h.rolloutTail, requireScope(auth.ScopeDevicesR))
-	upd.GET("/:tag/:update/tail", h.updateTail, requireScope(auth.ScopeDevicesR))
+	// upd.GET("/:tag/:update", h.updateGet, requireScope(users.ScopeDevicesR))
+	upd.GET("/:tag/:update/rollouts", h.rolloutList, requireScope(users.ScopeDevicesR))
+	upd.GET("/:tag/:update/rollouts/:rollout", h.rolloutGet, requireScope(users.ScopeDevicesR))
+	upd.PUT("/:tag/:update/rollouts/:rollout", h.rolloutPut, requireScope(users.ScopeDevicesRU))
+	upd.GET("/:tag/:update/rollouts/:rollout/tail", h.rolloutTail, requireScope(users.ScopeDevicesR))
+	upd.GET("/:tag/:update/tail", h.updateTail, requireScope(users.ScopeDevicesR))
 }

@@ -7,10 +7,11 @@ import (
 	"net/http"
 
 	"github.com/foundriesio/dg-satellite/auth"
+	"github.com/foundriesio/dg-satellite/storage/users"
 	"github.com/labstack/echo/v4"
 )
 
-func requireScope(scope auth.Scopes) echo.MiddlewareFunc {
+func requireScope(scope users.Scopes) echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			user := c.Get("user").(auth.User)

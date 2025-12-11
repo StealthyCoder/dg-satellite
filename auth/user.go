@@ -5,11 +5,13 @@ package auth
 
 import (
 	"net/http"
+
+	"github.com/foundriesio/dg-satellite/storage/users"
 )
 
 type User interface {
 	Id() string
-	Scopes() Scopes
+	Scopes() users.Scopes
 }
 
 // AuthUserFunc allows us to define a generic way for middleware to do

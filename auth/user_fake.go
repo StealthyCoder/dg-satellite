@@ -5,6 +5,8 @@ package auth
 
 import (
 	"net/http"
+
+	"github.com/foundriesio/dg-satellite/storage/users"
 )
 
 type fakeUser struct {
@@ -15,7 +17,7 @@ func (fakeUser) Id() string {
 	return "fake-user"
 }
 
-func (u fakeUser) Scopes() Scopes {
+func (u fakeUser) Scopes() users.Scopes {
 	if u.denyHasScope {
 		return 0
 	}

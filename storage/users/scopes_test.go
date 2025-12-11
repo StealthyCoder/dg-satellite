@@ -1,21 +1,19 @@
 // Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
 // SPDX-License-Identifier: BSD-3-Clause-Clear
 
-package auth_test
+package users
 
 import (
 	"slices"
 	"testing"
-
-	"github.com/foundriesio/dg-satellite/auth"
 )
 
 func TestScopesFromString(t *testing.T) {
 	tests := []struct {
 		name    string // description of this test case
 		scopes  string
-		want    auth.Scopes
-		has     []auth.Scopes
+		want    Scopes
+		has     []Scopes
 		wantErr bool
 	}{
 		{
@@ -36,19 +34,19 @@ func TestScopesFromString(t *testing.T) {
 		{
 			name:   "Handle white space",
 			scopes: "devices:read, users:read-update",
-			want:   auth.ScopeDevicesR | auth.ScopeUsersRU,
-			has:    []auth.Scopes{auth.ScopeDevicesR, auth.ScopeUsersR},
+			want:   ScopeDevicesR | ScopeUsersRU,
+			has:    []Scopes{ScopeDevicesR, ScopeUsersR},
 		},
 		{
 			name:   "Normalize supersets",
 			scopes: "devices:read, devices:read-update,updates:read",
-			want:   auth.ScopeDevicesRU | auth.ScopeUpdatesR,
-			has:    []auth.Scopes{auth.ScopeDevicesR, auth.ScopeDevicesRU, auth.ScopeUpdatesR},
+			want:   ScopeDevicesRU | ScopeUpdatesR,
+			has:    []Scopes{ScopeDevicesR, ScopeDevicesRU, ScopeUpdatesR},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, gotErr := auth.ScopesFromString(tt.scopes)
+			got, gotErr := ScopesFromString(tt.scopes)
 			if gotErr != nil {
 				if !tt.wantErr {
 					t.Errorf("ScopesFromString() failed: %v", gotErr)
@@ -68,7 +66,7 @@ func TestScopesFromString(t *testing.T) {
 					t.Errorf("ScopesFromString().Has(%v) = false, want true", h)
 				}
 			}
-			if got.Has(auth.ScopeDevicesD) {
+			if got.Has(ScopeDevicesD) {
 				t.Errorf("ScopesFromString().Has(devices:delete) = true, want false")
 			}
 		})
@@ -78,22 +76,22 @@ func TestScopesFromString(t *testing.T) {
 func TestScopes_ToSlice(t *testing.T) {
 	tests := []struct {
 		name   string // description of this test case
-		scopes auth.Scopes
+		scopes Scopes
 		want   []string
 	}{
 		{
 			name:   "devices:read and users:read-update",
-			scopes: auth.ScopeDevicesR | auth.ScopeUsersRU,
+			scopes: ScopeDevicesR | ScopeUsersRU,
 			want:   []string{"devices:read", "users:read-update"},
 		},
 		{
 			name:   "devices:read, users:read, users:delete",
-			scopes: auth.ScopeDevicesR | auth.ScopeUsersR | auth.ScopeUsersD,
+			scopes: ScopeDevicesR | ScopeUsersR | ScopeUsersD,
 			want:   []string{"devices:read", "users:delete", "users:read"},
 		},
 		{
 			name:   "users:read-update, users:create, updates:read-update",
-			scopes: auth.ScopeUsersRU | auth.ScopeUsersC | auth.ScopeUpdatesRU,
+			scopes: ScopeUsersRU | ScopeUsersC | ScopeUpdatesRU,
 			want:   []string{"updates:read-update", "users:create", "users:read-update"},
 		},
 	}
@@ -104,7 +102,7 @@ func TestScopes_ToSlice(t *testing.T) {
 				t.Fatalf("ToSlice() = %v, want %v", asSlice, tt.want)
 			}
 
-			got, err := auth.ScopesFromSlice(asSlice)
+			got, err := ScopesFromSlice(asSlice)
 			if err != nil {
 				t.Fatalf("ScopesFromSlice() failed: %v", err)
 			}

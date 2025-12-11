@@ -8,7 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/foundriesio/dg-satellite/auth"
 	"github.com/foundriesio/dg-satellite/storage"
 	"github.com/stretchr/testify/require"
 )
@@ -31,7 +30,7 @@ func TestNewStorage(t *testing.T) {
 		Username:      "testuser",
 		Password:      "passwordhash",
 		Email:         "testuser@example.com",
-		AllowedScopes: auth.ScopeDevicesR | auth.ScopeUsersRU,
+		AllowedScopes: ScopeDevicesR | ScopeUsersRU,
 	}
 	now := time.Now().Unix()
 	err = users.Create(&u)
@@ -48,8 +47,8 @@ func TestNewStorage(t *testing.T) {
 	require.Equal(t, u.Email, u2.Email)
 	require.Equal(t, u.AllowedScopes, u2.AllowedScopes)
 
-	require.True(t, u2.AllowedScopes.Has(auth.ScopeDevicesR))
-	require.False(t, u2.AllowedScopes.Has(auth.ScopeDevicesD))
+	require.True(t, u2.AllowedScopes.Has(ScopeDevicesR))
+	require.False(t, u2.AllowedScopes.Has(ScopeDevicesD))
 	require.Equal(t, []string{"devices:read", "users:read-update"}, u2.AllowedScopes.ToSlice())
 
 	require.NotNil(t, users.Create(u2), "duplicate username should fail")
@@ -77,7 +76,7 @@ func TestNewStorage(t *testing.T) {
 	require.Len(t, ul, 1)
 	require.Equal(t, "testuser", ul[0].Username)
 
-	ul[0].AllowedScopes = auth.ScopeDevicesD
+	ul[0].AllowedScopes = ScopeDevicesD
 	require.Nil(t, ul[0].Update("changed scopes"))
 
 	u4, err := users.Get("testuser")
@@ -104,18 +103,18 @@ func TestTokens(t *testing.T) {
 		Username:      "testuser",
 		Password:      "passwordhash",
 		Email:         "testuser@example.com",
-		AllowedScopes: auth.ScopeDevicesRU,
+		AllowedScopes: ScopeDevicesRU,
 	}
 	err = users.Create(&u)
 	require.Nil(t, err)
 
 	expires := time.Now().Add(1 * time.Hour).Unix()
-	t1, err := u.GenerateToken("desc", expires, auth.ScopeDevicesR)
+	t1, err := u.GenerateToken("desc", expires, ScopeDevicesR)
 	require.Nil(t, err)
 
 	time.Sleep(time.Second)
 	expired := time.Now().Add(-1 * time.Hour).Unix()
-	t2, err := u.GenerateToken("desc2", expired, auth.ScopeDevicesR)
+	t2, err := u.GenerateToken("desc2", expired, ScopeDevicesR)
 	require.Nil(t, err)
 	require.NotEqual(t, t1.Value, t2.Value)
 
@@ -123,8 +122,8 @@ func TestTokens(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, u2)
 	require.Equal(t, u.id, u2.id)
-	require.True(t, u2.AllowedScopes.Has(auth.ScopeDevicesR))
-	require.False(t, u2.AllowedScopes.Has(auth.ScopeDevicesRU))
+	require.True(t, u2.AllowedScopes.Has(ScopeDevicesR))
+	require.False(t, u2.AllowedScopes.Has(ScopeDevicesRU))
 
 	u2, err = users.GetByToken(t2.Value)
 	require.Nil(t, err)
@@ -147,19 +146,19 @@ func TestTokens(t *testing.T) {
 	require.Nil(t, err)
 	require.Len(t, tokens, 0)
 
-	_, err = u.GenerateToken("invalid scope", expires, auth.ScopeUsersC)
+	_, err = u.GenerateToken("invalid scope", expires, ScopeUsersC)
 	require.NotNil(t, err)
 
 	// Generate token with read-update
-	t1, err = u.GenerateToken("desc", expires, auth.ScopeDevicesRU)
+	t1, err = u.GenerateToken("desc", expires, ScopeDevicesRU)
 	require.Nil(t, err)
 	// Downgrade user to devices:read
-	u.AllowedScopes = auth.ScopeDevicesR
+	u.AllowedScopes = ScopeDevicesR
 	require.Nil(t, u.Update("test"))
 	u2, err = users.GetByToken(t1.Value)
 	require.Nil(t, err)
-	require.True(t, u2.AllowedScopes.Has(auth.ScopeDevicesR))
-	require.False(t, u2.AllowedScopes.Has(auth.ScopeDevicesRU))
+	require.True(t, u2.AllowedScopes.Has(ScopeDevicesR))
+	require.False(t, u2.AllowedScopes.Has(ScopeDevicesRU))
 
 	events, err := fs.Audit.ReadEvents(u.id)
 	require.Nil(t, err)
@@ -187,16 +186,16 @@ func TestGc(t *testing.T) {
 		Username:      "testuser",
 		Password:      "passwordhash",
 		Email:         "testuser@example.com",
-		AllowedScopes: auth.ScopeDevicesRU,
+		AllowedScopes: ScopeDevicesRU,
 	}
 	err = users.Create(&u)
 	require.Nil(t, err)
 
 	expires := time.Now().Add(-time.Hour).Unix()
-	_, err = u.GenerateToken("desc", expires, auth.ScopeDevicesR)
+	_, err = u.GenerateToken("desc", expires, ScopeDevicesR)
 	require.Nil(t, err)
 
-	session, err := u.CreateSession("127.0.0.1", expires, auth.ScopeDevicesR)
+	session, err := u.CreateSession("127.0.0.1", expires, ScopeDevicesR)
 	require.Nil(t, err)
 	require.NotEmpty(t, session)
 

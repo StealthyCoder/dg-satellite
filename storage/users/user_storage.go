@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/foundriesio/dg-satellite/auth"
 	"github.com/foundriesio/dg-satellite/storage"
 )
 
@@ -24,7 +23,7 @@ type User struct {
 	CreatedAt int64
 	Deleted   bool
 
-	AllowedScopes auth.Scopes
+	AllowedScopes Scopes
 }
 
 func (u User) Delete() error {
