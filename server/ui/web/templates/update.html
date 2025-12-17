@@ -13,6 +13,7 @@
       </fieldset>
 
       <button onclick='location.href="/updates/{{$.Prod}}/{{$.Tag}}/{{$.Name}}/tail";'>Follow progress</button>
+      <button onclick="rolloutModal.show()">Create rollout</button>
     </section>
 
     <section class="content-section">
@@ -22,7 +23,74 @@
         <li><a href="/updates/{{$.Prod}}/{{$.Tag}}/{{$.Name}}/rollouts/{{.}}">{{.}}</a></li>
       {{ end }}
       </ul>
+
+      <dialog id="rolloutModal">
+        <article>
+          <header>
+            <button aria-label="Close" rel="prev" onclick="rolloutModal.close()"></button>
+            <h3>Create new rollout</h3>
+          </header>
+          <form method="dialog">
+            <label for="name">Rollout name:</label>
+            <input type="text" id="name" name="name">
+
+            <label for="uuids">Uuids:</label>
+            <input type="text" id="uuids" name="uuids", placeholder="comma,separated,values">
+
+            <label for="deviceGroups">Device groups:</label>
+            <select id="deviceGroups" name="deviceGroups" multiple>
+              {{ range .Groups }}
+              <option value="{{.}}">{{.}}</option>
+              {{ end }}
+            </select>
+          </form>
+          <footer>
+            <button role="button" onclick="rolloutModal.close()">Cancel</button>
+            <button autofocus="" role="button" onclick="createRollout()">Confirm</button>
+          </footer>
+        </article>
+      </dialog>
     </section>
 
+    <script>
+      function createRollout() {
+        // Get form values
+        const uuids = document.getElementById('uuids').value;
+        const deviceGroupsSelect = document.getElementById('deviceGroups');
+        const selectedGroups = Array.from(deviceGroupsSelect.selectedOptions).map(option => option.value);
+
+        // Validate that at least one field is filled
+        if (!uuids && selectedGroups.length === 0) {
+          alert('Please provide either UUIDs or device groups.');
+          return;
+        }
+
+        const rolloutData = {
+          uuids: uuids ? uuids.split(',').map(s => s.trim()).filter(s => s) : [],
+          groups: selectedGroups
+        };
+
+        fetch('/v1/updates/{{.Prod}}/{{.Tag}}/{{.Name}}/rollouts/' + document.getElementById('name').value, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(rolloutData)
+        })
+        .then(async response => {
+          if (response.ok) {
+            rolloutModal.close();
+            window.location.reload(); // Refresh to show new rollout
+          } else {
+            const errorText = await response.text();
+            alert('Error creating rollout: ' + errorText);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error creating rollout: ' + error.message);
+        });
+      }
+    </script>
 
 {{ template "footer"}}

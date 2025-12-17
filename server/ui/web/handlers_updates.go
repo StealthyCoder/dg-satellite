@@ -39,18 +39,25 @@ func (h handlers) updatesGet(c echo.Context) error {
 	if err := getJson(c.Request().Context(), url, &rollouts); err != nil {
 		return h.handleUnexpected(c, err)
 	}
+
+	var groups []string
+	if err := getJson(c.Request().Context(), "/v1/known-labels/device-groups", &groups); err != nil {
+		return h.handleUnexpected(c, err)
+	}
 	ctx := struct {
 		baseCtx
 		Tag      string
 		Name     string
 		Prod     string
 		Rollouts []string
+		Groups   []string
 	}{
 		baseCtx:  h.baseCtx(c, "Update Details", "updates"),
 		Tag:      c.Param("tag"),
 		Name:     c.Param("name"),
 		Prod:     c.Param("prod"),
 		Rollouts: rollouts,
+		Groups:   groups,
 	}
 	return h.templates.ExecuteTemplate(c.Response(), "update.html", ctx)
 }
