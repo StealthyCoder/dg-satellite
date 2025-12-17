@@ -61,3 +61,14 @@ func (h AuthFsHandle) GetAuthConfig() (*AuthConfig, error) {
 	}
 	return &cfg, nil
 }
+
+func (h AuthFsHandle) SaveAuthConfig(cfg AuthConfig) error {
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return fmt.Errorf("unable to marshall auth config: %w", err)
+	}
+	if err := h.writeFile(AuthConfigFile, string(data), 0o640); err != nil {
+		return fmt.Errorf("storing auth config: %w", err)
+	}
+	return nil
+}
