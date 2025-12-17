@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/foundriesio/dg-satellite/auth"
 	"github.com/foundriesio/dg-satellite/storage"
 )
 
@@ -24,7 +23,7 @@ type User struct {
 	CreatedAt int64
 	Deleted   bool
 
-	AllowedScopes auth.Scopes
+	AllowedScopes Scopes
 }
 
 func (u User) Delete() error {
@@ -69,7 +68,7 @@ type Storage struct {
 }
 
 func NewStorage(db *storage.DbHandle, fs *storage.FsHandle) (*Storage, error) {
-	hmacSecret, err := fs.Certs.ReadFile(storage.HmacFile)
+	hmacSecret, err := fs.Auth.GetHmacSecret()
 	if err != nil {
 		return nil, fmt.Errorf("unable to read HMAC secret for API tokens: %w", err)
 	}

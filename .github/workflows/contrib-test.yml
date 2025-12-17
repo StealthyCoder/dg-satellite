@@ -30,6 +30,17 @@ jobs:
       - name: Generate test data
         run: |
           ./contrib/gen-certs.sh --data-dir .compose-server-data
+          mkdir -p .compose-server-data/auth
+          echo "just-for-ci" > .compose-server-data/auth/hmac.secret
+          cat >> .compose-server-data/auth/auth-config.json << EOF
+          {
+            "NewUserDefaultScopes" : [
+              "users:read",
+              "devices:read-update"
+            ],
+            "Type" : "noauth"
+          }
+          EOF
 
       - name: Test server
         run: |

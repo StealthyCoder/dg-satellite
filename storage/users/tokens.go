@@ -13,7 +13,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/foundriesio/dg-satellite/auth"
 	"github.com/foundriesio/dg-satellite/storage"
 	"golang.org/x/crypto/hkdf"
 )
@@ -23,7 +22,7 @@ type Token struct {
 	CreatedAt   int64
 	ExpiresAt   int64
 	Description string
-	Scopes      auth.Scopes
+	Scopes      Scopes
 	Value       string
 }
 
@@ -68,7 +67,7 @@ func (s Storage) GetByToken(token string) (*User, error) {
 	return u, err
 }
 
-func (u User) GenerateToken(description string, expires int64, scopes auth.Scopes) (*Token, error) {
+func (u User) GenerateToken(description string, expires int64, scopes Scopes) (*Token, error) {
 	if scopes&u.AllowedScopes != scopes {
 		return nil, fmt.Errorf("requested scopes %s exceed allowed scopes %s", scopes.String(), u.AllowedScopes.String())
 	}

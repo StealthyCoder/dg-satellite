@@ -20,6 +20,11 @@ func TestServe(t *testing.T) {
 	common := CommonArgs{DataDir: tmpDir}
 	fs, err := storage.NewFs(common.DataDir)
 	require.Nil(t, err)
+	require.Nil(t, fs.Auth.InitHmacSecret())
+	authConfig := storage.AuthConfig{
+		Type: "noauth",
+	}
+	require.Nil(t, fs.Auth.SaveAuthConfig(authConfig))
 	apiAddress := ""
 	gatewayAddress := ""
 	wait := make(chan bool)

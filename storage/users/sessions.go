@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/foundriesio/dg-satellite/auth"
 	"github.com/foundriesio/dg-satellite/storage"
 )
 
@@ -32,7 +31,7 @@ func (s Storage) GetBySession(id string) (*User, error) {
 	return u, err
 }
 
-func (u User) CreateSession(remoteIP string, expires int64, scopes auth.Scopes) (string, error) {
+func (u User) CreateSession(remoteIP string, expires int64, scopes Scopes) (string, error) {
 	if scopes&u.AllowedScopes != scopes {
 		return "", fmt.Errorf("requested scopes %s exceed allowed scopes %s", scopes.String(), u.AllowedScopes.String())
 	}
@@ -59,7 +58,7 @@ type session struct {
 	UserID    int64
 	RemoteIP  string
 	ExpiresAt int64
-	Scopes    auth.Scopes
+	Scopes    Scopes
 }
 
 type stmtSessionCreate storage.DbStmt
@@ -72,7 +71,7 @@ func (s *stmtSessionCreate) Init(db storage.DbHandle) (err error) {
 	return
 }
 
-func (s *stmtSessionCreate) run(u User, id, remoteIP string, created, expires int64, scopes auth.Scopes) error {
+func (s *stmtSessionCreate) run(u User, id, remoteIP string, created, expires int64, scopes Scopes) error {
 	_, err := s.Stmt.Exec(
 		id,
 		u.id,

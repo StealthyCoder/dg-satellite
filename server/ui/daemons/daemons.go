@@ -8,6 +8,7 @@ import (
 	"time"
 
 	storage "github.com/foundriesio/dg-satellite/storage/api"
+	"github.com/foundriesio/dg-satellite/storage/users"
 )
 
 type daemonFunc func(stop chan bool)
@@ -23,7 +24,7 @@ type daemons struct {
 	rolloutOptions rolloutOptions
 }
 
-func New(context context.Context, storage *storage.Storage, opts ...Option) *daemons {
+func New(context context.Context, storage *storage.Storage, users *users.Storage, opts ...Option) *daemons {
 	d := &daemons{context: context, storage: storage}
 	d.rolloutOptions = rolloutOptions{
 		interval: 5 * time.Minute,
@@ -31,6 +32,7 @@ func New(context context.Context, storage *storage.Storage, opts ...Option) *dae
 	d.daemons = []daemonFunc{
 		d.rolloutWatchdog(true),
 		d.rolloutWatchdog(false),
+		userGcDaemonFunc(users),
 	}
 
 	for _, opt := range opts {
