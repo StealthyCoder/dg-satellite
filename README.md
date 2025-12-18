@@ -8,6 +8,9 @@ There are two primary use cases for the satellite server:
 This project handles both use cases by implementing all the APIs used by Foundries.io update agents.
 The project also includes a user-facing REST API and Web UI for managing devices and updates.
 
+## Quick Start
+Follow the [Quick Start](./docs/quick-start.md) guide to get a server running in development mode.
+
 ## Developing
 The project is a single Golang binary that can be built with:
 ```
