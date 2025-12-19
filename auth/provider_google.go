@@ -30,7 +30,6 @@ type googleProvider struct {
 }
 
 func (p *googleProvider) Configure(e *echo.Echo, userStorage *users.Storage, cfg *storage.AuthConfig) error {
-	e.GET(AuthCallbackPath, p.handleOauthCallback)
 	var cfgGoogle authConfigGoogle
 	if err := json.Unmarshal(cfg.Config, &cfgGoogle); err != nil {
 		return fmt.Errorf("unable to unmarshal google config: %w", err)

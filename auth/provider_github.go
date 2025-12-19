@@ -29,7 +29,6 @@ type ghProvider struct {
 }
 
 func (p *ghProvider) Configure(e *echo.Echo, users *users.Storage, cfg *storage.AuthConfig) error {
-	e.GET(AuthCallbackPath, p.handleOauthCallback)
 	var cfgGithub authConfigGithub
 	if err := json.Unmarshal(cfg.Config, &cfgGithub); err != nil {
 		return fmt.Errorf("unable to unmarshal github config: %w", err)
