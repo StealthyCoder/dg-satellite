@@ -40,6 +40,10 @@ type Provider interface {
 	DropSession(c echo.Context, session *Session)
 }
 
+const AuthCookieName = "dg-satellite-session"
+const AuthLoginPath = "/auth/login"
+const AuthCallbackPath = "/auth/callback"
+
 var providers map[string]Provider
 
 func NewProvider(e *echo.Echo, db *storage.DbHandle, fs *storage.FsHandle, users *users.Storage) (Provider, error) {

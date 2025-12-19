@@ -18,6 +18,7 @@ type AuthFsHandle struct {
 
 type AuthConfig struct {
 	Type                 string
+	SessionTimeoutHours  int // Default is 48 hours
 	NewUserDefaultScopes []string
 	Config               json.RawMessage
 }
@@ -58,6 +59,9 @@ func (h AuthFsHandle) GetAuthConfig() (*AuthConfig, error) {
 
 	if err := json.Unmarshal([]byte(contents), &cfg); err != nil {
 		return nil, fmt.Errorf("unable to unmarshall auth config: %w", err)
+	}
+	if cfg.SessionTimeoutHours == 0 {
+		cfg.SessionTimeoutHours = 48
 	}
 	return &cfg, nil
 }
