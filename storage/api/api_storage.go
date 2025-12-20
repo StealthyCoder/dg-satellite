@@ -96,6 +96,60 @@ type Storage struct {
 	stmtDeviceSetUpdate stmtDeviceSetUpdate
 }
 
+func (d Device) Updates() ([]string, error) {
+	names, err := d.storage.fs.Devices.ListFiles(d.Uuid, storage.EventsPrefix, true)
+	if err != nil {
+		return nil, err
+	}
+	for i, name := range names {
+		names[i] = name[len(storage.EventsPrefix)+1:]
+	}
+	slices.Reverse(names)
+	return names, nil
+}
+
+func (d Device) Events(updateId string) ([]DeviceUpdateEvent, error) {
+	name := fmt.Sprintf("%s-%s", storage.EventsPrefix, updateId)
+	content, err := d.storage.fs.Devices.ReadFile(d.Uuid, name)
+	if err != nil {
+		return nil, err
+	}
+
+	lines := strings.Split(content, "\n")
+	events := make([]DeviceUpdateEvent, 0, len(lines))
+	for _, line := range lines {
+		if len(line) > 0 {
+			var evt DeviceUpdateEvent
+			if err := json.Unmarshal([]byte(line), &evt); err != nil {
+				return nil, fmt.Errorf("unexpected error unmarshalling event json: %w", err)
+			}
+			events = append(events, evt)
+		}
+	}
+	return events, nil
+}
+
+func (d Device) AppsStates() ([]AppsStates, error) {
+	names, err := d.storage.fs.Devices.ListFiles(d.Uuid, storage.StatesPrefix, true)
+	if err != nil {
+		return nil, err
+	}
+
+	states := make([]AppsStates, len(names))
+	for i, name := range names {
+		content, err := d.storage.fs.Devices.ReadFile(d.Uuid, name)
+		if err != nil {
+			return nil, err
+		}
+		var s AppsStates
+		if err := json.Unmarshal([]byte(content), &s); err != nil {
+			return nil, fmt.Errorf("unexpected error unmarshalling apps states json: %w", err)
+		}
+		states[len(names)-1-i] = s //store in reverse order
+	}
+	return states, nil
+}
+
 func NewStorage(db *storage.DbHandle, fs *storage.FsHandle) (*Storage, error) {
 	handle := Storage{db: db, fs: fs}
 
@@ -381,58 +435,4 @@ func (s *stmtDeviceSetUpdate) run(tag, updateName string, isProd bool, uuids, gr
 		}
 	}
 	return nil
-}
-
-func (d Device) Updates() ([]string, error) {
-	names, err := d.storage.fs.Devices.ListFiles(d.Uuid, storage.EventsPrefix, true)
-	if err != nil {
-		return nil, err
-	}
-	for i, name := range names {
-		names[i] = name[len(storage.EventsPrefix)+1:]
-	}
-	slices.Reverse(names)
-	return names, nil
-}
-
-func (d Device) Events(updateId string) ([]storage.DeviceUpdateEvent, error) {
-	name := fmt.Sprintf("%s-%s", storage.EventsPrefix, updateId)
-	content, err := d.storage.fs.Devices.ReadFile(d.Uuid, name)
-	if err != nil {
-		return nil, err
-	}
-
-	lines := strings.Split(content, "\n")
-	events := make([]storage.DeviceUpdateEvent, 0, len(lines))
-	for _, line := range lines {
-		if len(line) > 0 {
-			var evt storage.DeviceUpdateEvent
-			if err := json.Unmarshal([]byte(line), &evt); err != nil {
-				return nil, fmt.Errorf("unexpected error unmarshalling event json: %w", err)
-			}
-			events = append(events, evt)
-		}
-	}
-	return events, nil
-}
-
-func (d Device) AppsStates() ([]AppsStates, error) {
-	names, err := d.storage.fs.Devices.ListFiles(d.Uuid, storage.StatesPrefix, true)
-	if err != nil {
-		return nil, err
-	}
-
-	states := make([]AppsStates, len(names))
-	for i, name := range names {
-		content, err := d.storage.fs.Devices.ReadFile(d.Uuid, name)
-		if err != nil {
-			return nil, err
-		}
-		var s AppsStates
-		if err := json.Unmarshal([]byte(content), &s); err != nil {
-			return nil, fmt.Errorf("unexpected error unmarshalling apps states json: %w", err)
-		}
-		states[len(names)-1-i] = s //store in reverse order
-	}
-	return states, nil
 }
