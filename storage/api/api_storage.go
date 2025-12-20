@@ -20,8 +20,9 @@ type (
 
 	FsHandle = storage.FsHandle
 
-	AppsStates   = storage.AppsStates
-	DeviceStatus = storage.DeviceStatus
+	AppsStates        = storage.AppsStates
+	DeviceStatus      = storage.DeviceStatus
+	DeviceUpdateEvent = storage.DeviceUpdateEvent
 )
 
 const (
