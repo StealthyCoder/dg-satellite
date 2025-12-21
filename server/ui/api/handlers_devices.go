@@ -37,7 +37,7 @@ type LabelsReq struct {
 // @Router  /devices [get]
 func (h *handlers) deviceList(c echo.Context) error {
 	opts := storage.DeviceListOpts{
-		OrderBy: storage.OrderByDeviceLastSeenDsc,
+		OrderBy: storage.OrderByDeviceNameAsc,
 		Limit:   1000,
 		Offset:  0,
 	}

@@ -222,14 +222,63 @@ func TestApiDeviceList(t *testing.T) {
 	var devices []apiStorage.Device
 	require.Nil(t, json.Unmarshal(data, &devices))
 	require.Len(t, devices, 2)
-	assert.Equal(t, "test-device-2", devices[0].Uuid)
-	assert.Equal(t, "test-device-1", devices[1].Uuid)
+	// default sort is name-asc (name, uuid)
+	assert.Equal(t, "test-device-1", devices[0].Uuid)
+	assert.Equal(t, "test-device-2", devices[1].Uuid)
 
 	// test sorting
 	data = tc.GET("/devices?order-by=last-seen-asc", 200)
 	require.Nil(t, json.Unmarshal(data, &devices))
 	assert.Equal(t, "test-device-1", devices[0].Uuid)
 	assert.Equal(t, "test-device-2", devices[1].Uuid)
+	data = tc.GET("/devices?order-by=last-seen-desc", 200)
+	require.Nil(t, json.Unmarshal(data, &devices))
+	assert.Equal(t, "test-device-2", devices[0].Uuid)
+	assert.Equal(t, "test-device-1", devices[1].Uuid)
+	data = tc.GET("/devices?order-by=created-at-desc", 200)
+	require.Nil(t, json.Unmarshal(data, &devices))
+	assert.Equal(t, "test-device-2", devices[0].Uuid)
+	assert.Equal(t, "test-device-1", devices[1].Uuid)
+	data = tc.GET("/devices?order-by=name-desc", 200)
+	require.Nil(t, json.Unmarshal(data, &devices))
+	assert.Equal(t, "test-device-2", devices[0].Uuid)
+	assert.Equal(t, "test-device-1", devices[1].Uuid)
+	data = tc.GET("/devices?order-by=uuid-desc", 200)
+	require.Nil(t, json.Unmarshal(data, &devices))
+	assert.Equal(t, "test-device-2", devices[0].Uuid)
+	assert.Equal(t, "test-device-1", devices[1].Uuid)
+
+	// Set device name to override the uuid sort.
+	tc.u.AllowedScopes = users.ScopeDevicesRU
+	tc.PATCH("/devices/test-device-2/labels", 200,
+		`{"upserts":{"name":"test-device-3"}}`, "content-type", "application/json")
+	// Device with name before device without name.
+	data = tc.GET("/devices?order-by=name-asc", 200)
+	require.Nil(t, json.Unmarshal(data, &devices))
+	assert.Equal(t, "test-device-2", devices[0].Uuid)
+	assert.Equal(t, "test-device-1", devices[1].Uuid)
+	data = tc.GET("/devices?order-by=name-desc", 200)
+	require.Nil(t, json.Unmarshal(data, &devices))
+	assert.Equal(t, "test-device-2", devices[0].Uuid)
+	assert.Equal(t, "test-device-1", devices[1].Uuid)
+	// Order by UUID is not affected
+	data = tc.GET("/devices?order-by=uuid-asc", 200)
+	require.Nil(t, json.Unmarshal(data, &devices))
+	assert.Equal(t, "test-device-1", devices[0].Uuid)
+	assert.Equal(t, "test-device-2", devices[1].Uuid)
+
+	tc.PATCH("/devices/test-device-1/labels", 200,
+		`{"upserts":{"name":"test-device-1"}}`, "content-type", "application/json")
+	// Both devices have a name - order restored.
+	data = tc.GET("/devices?order-by=name-asc", 200)
+	require.Nil(t, json.Unmarshal(data, &devices))
+	assert.Equal(t, "test-device-1", devices[0].Uuid)
+	assert.Equal(t, "test-device-2", devices[1].Uuid)
+	data = tc.GET("/devices?order-by=name-desc", 200)
+	require.Nil(t, json.Unmarshal(data, &devices))
+	assert.Equal(t, "test-device-2", devices[0].Uuid)
+	assert.Equal(t, "test-device-1", devices[1].Uuid)
+
 }
 
 func TestApiDeviceGet(t *testing.T) {

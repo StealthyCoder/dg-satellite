@@ -31,6 +31,10 @@ const (
 	OrderByDeviceLastSeenAsc OrderBy = "last-seen-asc"
 	OrderByDeviceCreatedDsc  OrderBy = "created-at-desc"
 	OrderByDeviceCreatedAsc  OrderBy = "created-at-asc"
+	OrderByDeviceNameAsc     OrderBy = "name-asc"
+	OrderByDeviceNameDesc    OrderBy = "name-desc"
+	OrderByDeviceUuidAsc     OrderBy = "uuid-asc"
+	OrderByDeviceUuidDesc    OrderBy = "uuid-desc"
 )
 
 var orderByDeviceMap = map[OrderBy]string{
@@ -38,6 +42,11 @@ var orderByDeviceMap = map[OrderBy]string{
 	OrderByDeviceCreatedDsc:  "created_at DESC",
 	OrderByDeviceLastSeenAsc: "last_seen ASC",
 	OrderByDeviceLastSeenDsc: "last_seen DESC",
+	// Devices with name always come before devices without name
+	OrderByDeviceNameAsc:  "name ASC NULLS LAST, uuid ASC",
+	OrderByDeviceNameDesc: "name DESC NULLS LAST, uuid DESC",
+	OrderByDeviceUuidAsc:  "uuid ASC",
+	OrderByDeviceUuidDesc: "uuid DESC",
 }
 
 var (
