@@ -105,6 +105,7 @@ type Storage struct {
 	fs *storage.FsHandle
 
 	stmtDeviceGet       stmtDeviceGet
+	stmtDeviceGetLabels stmtDeviceGetLabels
 	stmtDeviceList      map[OrderBy]stmtDeviceList
 	stmtDeviceSetGroup  stmtDeviceSetGroup
 	stmtDeviceSetLabels stmtDeviceSetLabels
@@ -170,6 +171,7 @@ func NewStorage(db *storage.DbHandle, fs *storage.FsHandle) (*Storage, error) {
 
 	if err := db.InitStmt(
 		&handle.stmtDeviceGet,
+		&handle.stmtDeviceGetLabels,
 		&handle.stmtDeviceSetGroup,
 		&handle.stmtDeviceSetLabels,
 		&handle.stmtDeviceSetUpdate,
@@ -322,6 +324,10 @@ func (s Storage) SetGroupName(groupName string, uuids []string) error {
 	return s.stmtDeviceSetGroup.run(groupName, uuids)
 }
 
+func (s Storage) GetKnownDeviceLabelNames() ([]string, error) {
+	return s.stmtDeviceGetLabels.run()
+}
+
 func (s Storage) PatchDeviceLabels(labels map[string]*string, uuids []string) error {
 	// This function applies a merge-patch on top of existing labels:
 	// new labels are added, updated labels are replaced, null labels are removed, missing labels are left intact.
@@ -457,6 +463,21 @@ func (s *stmtDeviceSetLabels) run(labels map[string]*string, uuids []string) err
 	}
 	_, err = s.Stmt.Exec(labelsStr, uuidsStr)
 	return err
+}
+
+type stmtDeviceGetLabels storage.DbStmt
+
+func (s *stmtDeviceGetLabels) Init(db storage.DbHandle) (err error) {
+	s.Stmt, err = db.Prepare("apiDeviceGetLabelNames", `SELECT json_group_array(label) FROM device_labels`)
+	return
+}
+
+func (s *stmtDeviceGetLabels) run() (labels []string, err error) {
+	var labelsStr []byte
+	if err = s.Stmt.QueryRow().Scan(&labelsStr); err == nil {
+		err = json.Unmarshal(labelsStr, &labels)
+	}
+	return
 }
 
 type stmtDeviceSetUpdate storage.DbStmt

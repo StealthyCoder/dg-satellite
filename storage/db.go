@@ -88,6 +88,16 @@ func createTables(db *sql.DB) error {
 
 		CREATE UNIQUE INDEX idx_device_name ON devices(name);
 
+		CREATE TABLE device_labels (
+			label VARCHAR(20) NOT NULL PRIMARY KEY
+		) WITHOUT ROWID;
+
+		CREATE TRIGGER devices_after_update_labels AFTER UPDATE ON devices
+		BEGIN
+			INSERT OR IGNORE INTO device_labels(label)
+			SELECT json_each.key FROM json_each(NEW.labels);
+		END;
+
 		CREATE TABLE users (
 			id             INTEGER PRIMARY KEY AUTOINCREMENT,
 			username       TEXT NOT NULL UNIQUE,

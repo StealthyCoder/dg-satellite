@@ -112,6 +112,18 @@ func (h *handlers) deviceAppsStatesGet(c echo.Context) error {
 	})
 }
 
+// @Summary Get known device label names
+// @Produce json
+// @Success 200 []string
+// @Router  /known-labels/devices [get]
+func (h *handlers) deviceKnownLabelsGet(c echo.Context) error {
+	if labels, err := h.storage.GetKnownDeviceLabelNames(); err != nil {
+		return EchoError(c, err, http.StatusInternalServerError, "Failed to lookup known device labels")
+	} else {
+		return c.JSON(http.StatusOK, labels)
+	}
+}
+
 // @Summary Patch device labels
 // @Accept json
 // @Param data body LabelsReq true "Labels to upsert or delete"

@@ -315,8 +315,14 @@ func TestApiDeviceLabelsPatch(t *testing.T) {
 	headers := []string{"content-type", "application/json"}
 	data := `{"upserts":{"name":"test","foo":"bar"}}`
 	tc.PATCH("/devices/test-device-1/labels", 403, data, headers...)
+	tc.GET("/known-labels/devices", 403)
 	tc.u.AllowedScopes = users.ScopeDevicesR
 	tc.PATCH("/devices/test-device-1/labels", 403, data, headers...)
+
+	var labels []string
+	require.Nil(t, json.Unmarshal(tc.GET("/known-labels/devices", 200), &labels))
+	assert.Equal(t, []string{}, labels)
+
 	tc.u.AllowedScopes = users.ScopeDevicesRU
 	tc.PATCH("/devices/test-device-1/labels", 200, data, headers...)
 
@@ -324,6 +330,9 @@ func TestApiDeviceLabelsPatch(t *testing.T) {
 	require.Nil(t, json.Unmarshal(tc.GET("/devices/test-device-1", 200), &device))
 	assert.Equal(t, "test", device.Labels["name"])
 	assert.Equal(t, "bar", device.Labels["foo"])
+
+	require.Nil(t, json.Unmarshal(tc.GET("/known-labels/devices", 200), &labels))
+	assert.Equal(t, []string{"foo", "name"}, labels)
 
 	data = `{"upserts":{"bar":"baz"},"deletes":["foo"]}}`
 	tc.PATCH("/devices/test-device-1/labels", 200, data, headers...)
@@ -333,6 +342,9 @@ func TestApiDeviceLabelsPatch(t *testing.T) {
 	assert.Equal(t, "test", device.Labels["name"])
 	assert.Equal(t, "", device.Labels["foo"])
 	assert.Equal(t, "baz", device.Labels["bar"])
+
+	require.Nil(t, json.Unmarshal(tc.GET("/known-labels/devices", 200), &labels))
+	assert.Equal(t, []string{"bar", "foo", "name"}, labels)
 
 	data = `Bad JSON`
 	tc.PATCH("/devices/test-device-1/labels", 400, data, headers...)
@@ -353,6 +365,9 @@ func TestApiDeviceLabelsPatch(t *testing.T) {
 	tc.PATCH("/devices/test-device-2/labels", 200, data, headers...)
 	data = `{"upserts":{"name":"test-2"}}`
 	tc.PATCH("/devices/test-device-2/labels", 200, data, headers...)
+
+	require.Nil(t, json.Unmarshal(tc.GET("/known-labels/devices", 200), &labels))
+	assert.Equal(t, []string{"bar", "foo", "name"}, labels)
 }
 
 func TestApiDeviceLabelsPut(t *testing.T) {
