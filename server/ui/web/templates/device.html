@@ -44,12 +44,6 @@
         </div>
         <div>
           <dl>
-            <dt>Group name</dt>
-            <dd>{{.Device.GroupName}}</dd>
-          </dl>
-        </div>
-        <div>
-          <dl>
             <dt>Configured update</dt>
             <dd><a href="/updates/{{ if .Device.IsProd}}prod{{else}}ci{{end}}/{{.Device.Tag}}/{{.Device.UpdateName}}">{{.Device.UpdateName}}</a></dd>
           </dl>
@@ -68,10 +62,11 @@
             <dt>Labels - <a href='/devices/{{.Device.Uuid}}/labels'>manage</a></dt>
             <dd>
               <ul>
-              {{/* A name label (if present) is always the first one */}}
+              {{/* A name and a group labels (if present) are always the first ones */}}
               {{ if .Device.Labels.name }}<li>name: {{.Device.Labels.name}}</li>{{ end }}
+              {{ if .Device.Labels.group }}<li>group: {{.Device.Labels.group}}</li>{{ end }}
               {{ range $key, $value := .Device.Labels }}
-                {{if ne $key "name"}}<li>{{$key}}: {{$value}}</li>{{end}}
+                {{if and (ne $key "name") (ne $key "group")}}<li>{{$key}}: {{$value}}</li>{{end}}
               {{ end }}
               </ul>
             </dd>
