@@ -9,6 +9,8 @@ import (
 	"iter"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 )
 
 type UpdatesFsHandle struct {
@@ -27,6 +29,31 @@ func (s UpdatesFsHandle) ReadFile(tag, update, name string) (string, error) {
 		err = fmt.Errorf("error reading %s file for tag %s update %s: %w", s.category, tag, update, err)
 	}
 	return content, err
+}
+
+func (s UpdatesFsHandle) LatestRootMetaName(tag, update string) (string, error) {
+	h, _ := s.updateLocalHandle(tag, update, false)
+	files, err := h.matchFiles("", false)
+	if err != nil {
+		return "", fmt.Errorf("error find latest root metadata: %w", err)
+	}
+	slices.SortFunc(files, func(a, b string) int {
+		aIsRoot := strings.HasSuffix(a, ".root.json")
+		bIsRoot := strings.HasSuffix(b, ".root.json")
+		if aIsRoot && bIsRoot {
+			// Convert both into 0 padded strings to ensure proper lexicographical comparison
+			// 13 = makes 1.root.json become 001.root.json to support 999 versions of root.json
+			a = fmt.Sprintf("%013s", a)
+			b = fmt.Sprintf("%013s", b)
+			return strings.Compare(b, a)
+		} else if aIsRoot {
+			return -1
+		} else if bIsRoot {
+			return 1
+		}
+		return strings.Compare(b, a)
+	})
+	return files[0], nil
 }
 
 func (s UpdatesFsHandle) TailFileLines(tag, update, name string, stop DoneChan) iter.Seq2[string, error] {

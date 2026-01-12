@@ -251,6 +251,36 @@ func (s Storage) ListUpdates(tag string, isProd bool) (map[string][]string, erro
 	return s.getRolloutsFsHandle(isProd).ListUpdates(tag)
 }
 
+func (s Storage) GetUpdateTufMetadata(tag, updateName string, isProd bool) (map[string]map[string]any, error) {
+	handle := s.fs.Updates.Ci
+	if isProd {
+		handle = s.fs.Updates.Prod
+	}
+
+	latestRoot, err := handle.Tuf.LatestRootMetaName(tag, updateName)
+	if err != nil {
+		return nil, err
+	}
+
+	meta := make(map[string]map[string]any)
+	for _, x := range []string{"targets.json", "snapshot.json", "timestamp.json", latestRoot} {
+		metaStr, err := handle.Tuf.ReadFile(tag, updateName, x)
+		if err != nil {
+			return nil, err
+		}
+		var metaDict map[string]any
+		if err := json.Unmarshal([]byte(metaStr), &metaDict); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal %s: %w", x, err)
+		}
+		if x == latestRoot {
+			x = "root.json"
+		}
+		meta[x] = metaDict
+	}
+
+	return meta, nil
+}
+
 func (s Storage) ListRollouts(tag, updateName string, isProd bool) ([]string, error) {
 	return s.getRolloutsFsHandle(isProd).ListFiles(tag, updateName)
 }
