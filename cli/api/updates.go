@@ -20,3 +20,9 @@ func (u UpdatesApi) List() (map[string][]string, error) {
 	var updates map[string][]string
 	return updates, u.api.Get("/v1/updates/"+u.Type, &updates)
 }
+
+func (u UpdatesApi) Get(tag, updateName string) ([]string, error) {
+	var rollouts []string
+	endpoint := "/v1/updates/" + u.Type + "/" + tag + "/" + updateName + "/rollouts"
+	return rollouts, u.api.Get(endpoint, &rollouts)
+}
