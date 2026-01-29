@@ -494,7 +494,7 @@ func TestApiUpdateList(t *testing.T) {
 	tc.GET("/updates/ci/tag", 403)
 	tc.GET("/updates/prod", 403)
 	tc.GET("/updates/prod/tag", 403)
-	tc.u.AllowedScopes = users.ScopeDevicesR
+	tc.u.AllowedScopes = users.ScopeUpdatesR
 
 	tc.GET("/updates/non-prod", 404)
 	tc.GET("/updates/non-prod/tag", 404)
@@ -536,7 +536,7 @@ func TestApiRolloutList(t *testing.T) {
 	tc := NewTestClient(t)
 	tc.GET("/updates/ci/tag/update/rollouts", 403)
 	tc.GET("/updates/prod/tag/update/rollouts", 403)
-	tc.u.AllowedScopes = users.ScopeDevicesR
+	tc.u.AllowedScopes = users.ScopeUpdatesR
 
 	tc.GET("/updates/non-prod/tag/update/rollouts", 404)
 
@@ -573,7 +573,7 @@ func TestApiRolloutGet(t *testing.T) {
 	tc := NewTestClient(t)
 	tc.GET("/updates/ci/tag/update/rollouts/rolling", 403)
 	tc.GET("/updates/prod/tag/update/rollouts/stones", 403)
-	tc.u.AllowedScopes = users.ScopeDevicesR
+	tc.u.AllowedScopes = users.ScopeUpdatesR
 
 	tc.GET("/updates/non-prod/tag/update/rollouts/rocks", 404)
 
@@ -608,7 +608,7 @@ func TestApiRolloutPut(t *testing.T) {
 	tc := NewTestClient(t)
 	tc.PUT("/updates/ci/tag/update/rollouts/rolling", 403, "{}")
 	tc.PUT("/updates/prod/tag/update/rollouts/stones", 403, "{}")
-	tc.u.AllowedScopes = users.ScopeDevicesRU
+	tc.u.AllowedScopes = users.ScopeUpdatesRU
 
 	tc.PUT("/updates/non-prod/tag/update/rollouts/rocks", 404, "{}")
 
@@ -702,7 +702,7 @@ func TestApiRolloutDaemon(t *testing.T) {
 
 	daemons.Start()
 	defer daemons.Shutdown()
-	tc.u.AllowedScopes = users.ScopeDevicesR
+	tc.u.AllowedScopes = users.ScopeUpdatesR
 
 	require.Nil(t, tc.fs.Updates.Ci.Ostree.WriteFile("tag1", "update1", "foo", "bar"))
 	require.Nil(t, tc.fs.Updates.Prod.Ostree.WriteFile("tag2", "update2", "foo", "bar"))
@@ -750,7 +750,7 @@ func TestApiRolloutDaemon(t *testing.T) {
 func TestApiUpdateTail(t *testing.T) {
 	tc := NewTestClient(t)
 	tc.GET("/updates/prod/tag1/update1/tail", 403)
-	tc.u.AllowedScopes = users.ScopeDevicesR
+	tc.u.AllowedScopes = users.ScopeUpdatesR
 
 	d, err := tc.gw.DeviceCreate("test-device-1", "pubkey1", true)
 	require.Nil(t, err)
