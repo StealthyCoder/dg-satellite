@@ -34,5 +34,7 @@ A "devshell" is also included that can be used for local development:
  ./contrib/dev-shell
 ```
 
+***NOTE***: This repository uses Git-LFS. You'll need this installed to use the web UI.
+
 ## License
 *dg-satellite* is under the [BSD 3-Clause Clear](./LICENSE.txt) license.

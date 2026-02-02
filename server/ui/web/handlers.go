@@ -39,7 +39,7 @@ func RegisterHandlers(e *echo.Echo, storage *users.Storage, authProvider auth.Pr
 	e.Renderer = h
 
 	e.GET("/", h.index, h.requireSession)
-	e.GET("/style.css", h.css)
+	e.GET("/css/:filename", h.css)
 	e.GET("/auth/logout", h.authLogout, h.requireSession)
 	e.GET("/devices", h.devicesList, h.requireSession, h.requireScope(users.ScopeDevicesR))
 	e.GET("/devices/:uuid", h.devicesGet, h.requireSession, h.requireScope(users.ScopeDevicesR))
@@ -85,7 +85,7 @@ func (h handlers) css(c echo.Context) error {
 	c.Response().Header().Set("ETag", h.styleEtag)
 	c.Response().Header().Set("Cache-Control", "public, max-age=3600") // 1 hour in seconds
 	c.Response().Header().Set("Content-Type", "text/css")
-	return h.Render(c.Response(), "style.css", nil, c)
+	return h.Render(c.Response(), c.Param("filename"), nil, c)
 }
 
 func (h handlers) index(c echo.Context) error {
