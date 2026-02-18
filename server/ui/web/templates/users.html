@@ -76,6 +76,39 @@
       </dialog>
       {{ end }}
     </section>
+    
+    {{ if and .LocalAuth .CanCreate }}
+    <section class="content-section">
+      <h3>Actions</h3>
+      <button onclick="showCreateUserModal()">Create new user</button>
+    </section>
+    <dialog id="createUserModal">
+      <article>
+        <header>
+          <button aria-label="Close" rel="prev" onclick="createUserModal.close()"></button>
+          <h3>Create New User</h3>
+        </header>
+        <form method="dialog">
+          <label for="createUsername">Username:</label>
+          <input type="text" id="createUsername" name="createUsername" required>
+          <label for="createPassword">Password:</label>
+          <input type="password" id="createPassword" name="createPassword" required>
+          <label for="createConfirmPassword">Confirm Password:</label>
+          <input type="password" id="createConfirmPassword" name="createConfirmPassword" required>
+          <span id="createPasswordError" style="color: red; display: none;">Passwords do not match</span>
+          <label>Scopes:</label>
+          {{range $.ScopesList}}
+          <input type="checkbox" id="create-scope-{{.}}" name="createScopes" value="{{.}}">
+          <label for="create-scope-{{.}}">{{.}}</label><br>
+          {{end}}
+        </form>
+        <footer>
+          <button role="button" onclick="createUserModal.close()">Cancel</button>
+          <button autofocus="" role="button" onclick="createUser()">Create</button>
+        </footer>
+      </article>
+    </dialog>
+    {{ end }}
 
     <script>
       let currentUser = null;
@@ -192,6 +225,86 @@
           resetNew.addEventListener('input', checkResetMatch);
         }
       });
+
+      {{ if and .LocalAuth .CanCreate }}
+      function showCreateUserModal() {
+        document.getElementById('createUsername').value = '';
+        document.getElementById('createPassword').value = '';
+        document.getElementById('createConfirmPassword').value = '';
+        document.getElementById('createPasswordError').style.display = 'none';
+        const createScopeBoxes = document.getElementsByName('createScopes');
+        Array.from(createScopeBoxes).forEach(cb => cb.checked = false);
+        createUserModal.show();
+        document.getElementById('createUsername').focus();
+      }
+
+      function createUser() {
+        const username = document.getElementById('createUsername').value.trim();
+        const password = document.getElementById('createPassword').value;
+        const confirmPassword = document.getElementById('createConfirmPassword').value;
+
+        if (!username) {
+          alert('Username is required.');
+          return;
+        }
+        if (!password) {
+          alert('Password is required.');
+          return;
+        }
+        if (password !== confirmPassword) {
+          document.getElementById('createPasswordError').style.display = 'inline';
+          return;
+        }
+
+        const scopeCheckboxes = document.getElementsByName('createScopes');
+        const scopes = Array.from(scopeCheckboxes)
+          .filter(checkbox => checkbox.checked)
+          .map(checkbox => checkbox.value);
+
+        fetch('/users', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            username: username,
+            password: password,
+            scopes: scopes
+          })
+        })
+        .then(async response => {
+          if (response.ok) {
+            createUserModal.close();
+            window.location.reload();
+          } else {
+            const errorText = await response.text();
+            alert('Error creating user: ' + errorText);
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error creating user: ' + error.message);
+        });
+      }
+
+      // Set up password match validation for create user dialog
+      document.addEventListener('DOMContentLoaded', function() {
+        const createConfirm = document.getElementById('createConfirmPassword');
+        const createNew = document.getElementById('createPassword');
+        const createError = document.getElementById('createPasswordError');
+        if (createConfirm && createNew) {
+          function checkCreateMatch() {
+            if (createConfirm.value && createNew.value !== createConfirm.value) {
+              createError.style.display = 'inline';
+            } else {
+              createError.style.display = 'none';
+            }
+          }
+          createConfirm.addEventListener('input', checkCreateMatch);
+          createNew.addEventListener('input', checkCreateMatch);
+        }
+      });
+      {{ end }}
 
       function updateScopes() {
         if (!currentUser) {

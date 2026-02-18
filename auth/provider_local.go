@@ -66,9 +66,76 @@ func (p *localProvider) Configure(e *echo.Echo, userStorage *users.Storage, cfg 
 	}
 
 	e.POST("/auth/login", p.handleLogin)
+	e.POST("/users", p.handleUserCreate)
 	e.POST("/users/:username/password", p.handlePasswordChange)
 	e.POST("/users/:username/reset-password", p.handlePasswordReset)
 	return nil
+}
+
+func (p *localProvider) handleUserCreate(c echo.Context) error {
+	session, err := p.GetSession(c)
+	if err != nil {
+		return server.EchoError(c, err, http.StatusInternalServerError, err.Error())
+	} else if session == nil {
+		err := errors.New("authentication required")
+		return server.EchoError(c, err, http.StatusUnauthorized, "authentication required")
+	}
+
+	if !session.User.AllowedScopes.Has(users.ScopeUsersC) {
+		err := fmt.Errorf("user missing required scope: %s", users.ScopeUsersC)
+		return server.EchoError(c, err, http.StatusForbidden, err.Error())
+	}
+
+	type createRequest struct {
+		Username string   `json:"username"`
+		Password string   `json:"password"`
+		Scopes   []string `json:"scopes"`
+	}
+	var req createRequest
+	if err := c.Bind(&req); err != nil {
+		return server.EchoError(c, err, http.StatusBadRequest, "Could not parse request")
+	}
+
+	if req.Username == "" || req.Password == "" {
+		return server.EchoError(c, errors.New("missing fields"), http.StatusBadRequest, "Username and password are required")
+	}
+
+	if existing, err := p.users.Get(req.Username); err == nil && existing != nil {
+		return server.EchoError(c, fmt.Errorf("user %q already exists", req.Username), http.StatusConflict, fmt.Sprintf("User %q already exists", req.Username))
+	}
+
+	if p.authConfig.MinPasswordLength > 0 && len(req.Password) < p.authConfig.MinPasswordLength {
+		err := fmt.Errorf("password must be at least %d characters", p.authConfig.MinPasswordLength)
+		return server.EchoError(c, err, http.StatusBadRequest, err.Error())
+	}
+
+	if err := p.validatePasswordComplexity(req.Password); err != nil {
+		return server.EchoError(c, err, http.StatusBadRequest, err.Error())
+	}
+
+	hashed, err := PasswordHash(req.Password)
+	if err != nil {
+		return server.EchoError(c, err, http.StatusInternalServerError, "Unable to hash password")
+	}
+
+	scopes := p.newUserScopes
+	if len(req.Scopes) > 0 {
+		scopes, err = users.ScopesFromSlice(req.Scopes)
+		if err != nil {
+			return server.EchoError(c, err, http.StatusBadRequest, fmt.Sprintf("Invalid scope: %s", err))
+		}
+	}
+
+	u := &users.User{
+		Username:      req.Username,
+		Password:      hashed,
+		AllowedScopes: scopes,
+	}
+
+	if err := p.users.Create(u); err != nil {
+		return server.EchoError(c, err, http.StatusInternalServerError, "Unable to create user")
+	}
+	return c.String(http.StatusCreated, "User created")
 }
 
 func (p *localProvider) handleLogin(c echo.Context) error {
