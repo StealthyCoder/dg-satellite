@@ -1,0 +1,11 @@
+master:
+  args:
+    - --users=100
+    - --run-time=620
+    - --spawn-rate=25
+  environment:
+    # run-time = 10m + users / spawn-rate + clear-after
+    CLEAR_STATS_AFTER_SPAWNING: 15
+
+worker:
+  replicas: 4

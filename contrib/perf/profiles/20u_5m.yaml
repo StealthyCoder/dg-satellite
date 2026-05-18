@@ -1,0 +1,8 @@
+master:
+  args:
+    - --users=20
+    - --run-time=300
+    - --spawn-rate=20
+
+worker:
+  replicas: 1

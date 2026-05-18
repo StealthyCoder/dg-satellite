@@ -1,0 +1,3 @@
+loadtest:
+  locust_locustfile: main/register_devices.py
+  tags: "device:register"

@@ -1,0 +1,25 @@
+[project]
+name = "perf"
+version = "0.1.0"
+description = "Simple Locust based testing for dg-satellite"
+authors = [
+    {name = "Eric Bode",email = "eric.bode@foundries.io"}
+]
+license = "MIT"
+requires-python = ">=3.12"
+dependencies = [
+    "locust (>=2.44.0,<3.0.0)"
+]
+
+[dependency-groups]
+dev = [
+    "black (>=26.3.1,<27.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+package-mode = false
