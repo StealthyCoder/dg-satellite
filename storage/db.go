@@ -43,9 +43,16 @@ func NewDb(dbfile string) (*DbHandle, error) {
 	if err != nil {
 		return nil, err
 	}
-	// A single writer connection prevents writer-vs-writer lock contention.
-	// Readers share the WAL file and are not blocked by this limit.
-	db.SetMaxOpenConns(1)
+	// DIAGNOSTIC CHANGE (test-maxopenconns-8 branch, not for merging as-is):
+	// raised from 1 to 8 to test whether the single shared connection across
+	// every mtls request (authDevice's DeviceGet SELECT runs on /device,
+	// /config, and /events alike) is what produces the growing tail latency
+	// observed under sustained dual-VM load once disk I/O was no longer the
+	// bottleneck. WAL mode already permits concurrent readers; _busy_timeout
+	// above covers writer-vs-writer contention if concurrent writes now
+	// occur. See this repo's perf-test results/ directory for the run this
+	// is testing against.
+	db.SetMaxOpenConns(8)
 	if newDb {
 		if err := createTables(db); err != nil {
 			return nil, err
